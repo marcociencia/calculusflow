@@ -1,22 +1,67 @@
-"""Módulos de cálculo: limites, derivada por definição, integral por Riemann, derivadas e integrais."""
+"""calculus.py - versão à prova de falha com loader direto de arquivo"""
 import sys
 from pathlib import Path
+import importlib.util
 
-# --- FIX DEFINITIVO: sem import relativo ---
-# Adiciona a pasta calculusflow ao path para que "from core import" funcione
 _HERE = Path(__file__).parent.resolve()
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 if str(_HERE.parent) not in sys.path:
     sys.path.insert(0, str(_HERE.parent))
 
+# Função que tenta importar core de 3 jeitos diferentes
+def _load_core():
+    # 1. import normal
+    try:
+        from core import parse_expr, get_var, X, for_plot, num
+        return parse_expr, get_var, X, for_plot, num
+    except ModuleNotFoundError:
+        pass
+    # 2. como pacote
+    try:
+        from calculusflow.core import parse_expr, get_var, X, for_plot, num
+        return parse_expr, get_var, X, for_plot, num
+    except ModuleNotFoundError:
+        pass
+    # 3. carregar direto do arquivo core.py na mesma pasta (último recurso)
+    core_file = _HERE / "core.py"
+    if core_file.exists():
+        spec = importlib.util.spec_from_file_location("core", core_file)
+        core_mod = importlib.util.module_from_spec(spec)
+        sys.modules["core"] = core_mod
+        spec.loader.exec_module(core_mod)
+        return core_mod.parse_expr, core_mod.get_var, core_mod.X, core_mod.for_plot, core_mod.num
+    else:
+        raise ModuleNotFoundError(f"core.py não encontrado em {_HERE}. Arquivos lá: {[f.name for f in _HERE.glob('*.py')]}")
+
+parse_expr, get_var, X, for_plot, num = _load_core()
+
+# mesmo esquema para plot_util
+def _load_plot_util():
+    try:
+        import plot_util
+        return plot_util
+    except ModuleNotFoundError:
+        pass
+    try:
+        from calculusflow import plot_util as pu
+        return pu
+    except ModuleNotFoundError:
+        pass
+    plot_file = _HERE / "plot_util.py"
+    if plot_file.exists():
+        spec = importlib.util.spec_from_file_location("plot_util", plot_file)
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules["plot_util"] = mod
+        spec.loader.exec_module(mod)
+        return mod
+    else:
+        raise ModuleNotFoundError(f"plot_util.py não encontrado em {_HERE}")
+
+plot_util = _load_plot_util()
+
 import streamlit as st
 import sympy as sp
-
-# Imports absolutos apenas - nunca usar from .core
-from core import parse_expr, get_var, X, for_plot, num
-import plot_util
-
 
 def _show(steps, final, plot=None):
     for title, detail in steps:
@@ -26,7 +71,6 @@ def _show(steps, final, plot=None):
     st.latex(final) if not final.startswith('$$') else st.markdown(final)
     if plot:
         st.pyplot(plot_util.plot_functions(**plot))
-
 
 def solve_limit(expr_str, point):
     f = parse_expr(expr_str)
@@ -52,7 +96,6 @@ def solve_limit(expr_str, point):
             'points': [{'x': float(p), 'y': yv, 'label': f'L = {lim}', 'color': 'red'}] if yv is not None else None}
     return steps, final, plot
 
-
 def render_limit():
     st.subheader("Limites")
     expr = st.text_input("Função f(x)", value="sin(x)/x", key="lim_expr")
@@ -65,7 +108,6 @@ def render_limit():
         _show(steps, final, plot)
     except Exception as ex:
         st.error(str(ex))
-
 
 def solve_derivative_limit(expr_str, point, var_name='x'):
     var = get_var(var_name)
@@ -94,7 +136,6 @@ def solve_derivative_limit(expr_str, point, var_name='x'):
             'points': [{'x': float(point), 'y': yv, 'label': f'({point}, {f_pt})'}] if yv is not None else None}
     return steps, final, plot
 
-
 def render_derivative_limit():
     st.subheader("Derivada — definição por limite")
     expr = st.text_input("f(x)", value="x^2", key="dl_expr")
@@ -107,7 +148,6 @@ def render_derivative_limit():
         _show(steps, final, plot)
     except Exception as ex:
         st.error(str(ex))
-
 
 def solve_integral_limit(expr_str, a, b, n, var_name='x'):
     var = get_var(var_name)
@@ -129,7 +169,6 @@ def solve_integral_limit(expr_str, a, b, n, var_name='x'):
             'shade': {'expr': for_plot(f, x), 'from': a, 'to': b}}
     return steps, final, plot
 
-
 def render_integral_limit():
     st.subheader("Integral — limite das somas de Riemann")
     expr = st.text_input("f(x)", value="x^2", key="il_expr")
@@ -144,7 +183,6 @@ def render_integral_limit():
         _show(steps, final, plot)
     except Exception as ex:
         st.error(str(ex))
-
 
 def solve_derivative(expr_str, var_name, rule):
     var = get_var(var_name)
@@ -168,7 +206,6 @@ def solve_derivative(expr_str, var_name, rule):
             'x_min': -5, 'x_max': 5}
     return steps, final, plot
 
-
 def render_derivative():
     st.subheader("Derivadas — regras")
     expr = st.text_input(f"f(variável)", value="x^3 + 2*x^2 + sin(x)", key="der_expr")
@@ -183,7 +220,6 @@ def render_derivative():
         _show(steps, final, plot)
     except Exception as ex:
         st.error(str(ex))
-
 
 def solve_integral(expr_str, var_name, rule, kind, a, b):
     var = get_var(var_name)
@@ -213,7 +249,6 @@ def solve_integral(expr_str, var_name, rule, kind, a, b):
         final = f"\\int {sp.latex(f)}\\,d{sp.latex(x)} = {sp.latex(result)} + C"
         plot = None
     return steps, final, plot
-
 
 def render_integral():
     st.subheader("Integrais — regras")
