@@ -1,9 +1,22 @@
-"""CalculusFlow — versão Streamlit. Aplicativo interativo de matemática passo a passo."""
+"""CalculusFlow — versão Streamlit. Corrigido para Streamlit Cloud."""
+import sys
+from pathlib import Path
+
+# Garante que a pasta do app.py esteja no sys.path (essencial no Streamlit Cloud)
+ROOT = Path(__file__).parent
+sys.path.insert(0, str(ROOT))
+# Também garante que a raiz do repo esteja no path caso o app esteja em subpasta
+sys.path.insert(0, str(ROOT.parent))
+
 import streamlit as st
 
-import arithmetic
-import calculus
-import algebra
+# Imports robustos - funcionam se os módulos estão na mesma pasta ou como pacote
+try:
+    import arithmetic
+    import calculus
+    import algebra
+except ModuleNotFoundError:
+    from calculusflow import arithmetic, calculus, algebra
 
 st.set_page_config(page_title="CalculusFlow", page_icon="➗", layout="centered")
 
