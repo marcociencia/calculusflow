@@ -1,21 +1,8 @@
 """
-CalculusFlow — versão Streamlit (arquivo único autossuficiente)
+CalculusFlow — Streamlit Version (Self-contained single file)
 ==============================================================
-Aplicativo de matemática passo a passo (aritmética, cálculo e álgebra).
-Cálculo simbólico com SymPy — sem chave de API, gratuito para rodar no Streamlit Cloud.
-
-Como rodar localmente:
-    pip install streamlit sympy matplotlib numpy
-    streamlit run app.py
-
-Como publicar no Streamlit Community Cloud:
-    1. Suba este arquivo (app.py) num repositório GitHub.
-    2. Crie um arquivo requirements.txt na raiz com:
-            streamlit>=1.30
-            sympy>=1.12
-            matplotlib>=3.7
-            numpy>=1.24
-    3. No https://streamlit.io/cloud -> New app -> Main file path: app.py -> Deploy.
+Step-by-step math application (arithmetic, calculus, and algebra).
+Symbolic calculation with SymPy — no API key, free to run on Streamlit Cloud.
 """
 
 import streamlit as st
@@ -24,9 +11,8 @@ import matplotlib.pyplot as plt
 import sympy as sp
 from sympy import lambdify
 
-
 # =============================================================================
-#  NÚCLEO — parsing e helpers
+#  CORE — parsing and helpers
 # =============================================================================
 X, Y, Z = sp.symbols('x y z')
 _VAR_MAP = {'x': X, 'y': Y, 'z': Z}
@@ -42,23 +28,23 @@ _LOCALS = {
 
 def get_var(name):
     if name not in _VAR_MAP:
-        raise ValueError(f"Variável '{name}' não suportada. Use x, y ou z.")
+        raise ValueError(f"Variable '{name}' not supported. Use x, y, or z.")
     return _VAR_MAP[name]
 
 
 def parse_expr(s, var_name='x'):
     if s is None or str(s).strip() == '':
-        raise ValueError("Expressão vazia.")
+        raise ValueError("Empty expression.")
     expr_str = str(s).strip().replace('^', '**')
     try:
         return sp.sympify(expr_str, locals=_LOCALS)
     except Exception as ex:
-        raise ValueError(f"Não foi possível interpretar '{s}': {ex}")
+        raise ValueError(f"Could not parse '{s}': {ex}")
 
 
 def parse_equation(s):
     if '=' not in str(s):
-        raise ValueError("A equação precisa conter '='.")
+        raise ValueError("Equation must contain '='.")
     lhs, rhs = str(s).split('=', 1)
     return parse_expr(lhs) - parse_expr(rhs)
 
@@ -109,20 +95,31 @@ def plot_functions(exprs, x_min, x_max, points=None, shade=None, title=None):
 
 
 def _show(steps, final, plot=None):
-    for title, detail in steps:
-        st.markdown(f"**{title}**")
-        st.markdown(detail)
-    st.markdown("**Resposta final**")
+    for i, (title, detail) in enumerate(steps, 1):
+        st.markdown(f"""
+        <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <div style="background: #111; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 14px;">{i}</div>
+                <h4 style="margin: 0; padding: 0;">{title}</h4>
+            </div>
+            <div style="margin-left: 34px;">{detail}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("""<div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-top: 15px;">
+        <h4 style="margin: 0 0 10px 0;">Final Result</h4>""", unsafe_allow_html=True)
     if final.startswith('$$'):
         st.markdown(final)
     else:
         st.latex(final)
+    st.markdown("</div>", unsafe_allow_html=True)
+        
     if plot:
         st.pyplot(plot_functions(**plot))
 
 
 # =============================================================================
-#  ARITMÉTICA
+#  ARITHMETIC
 # =============================================================================
 def _cell(v, extra=''):
     content = '' if v is None else str(v)
@@ -131,14 +128,11 @@ def _cell(v, extra=''):
             f'font-family:ui-monospace,monospace;font-size:1.8em;font-weight:600;{extra}">'
             f'{content}</span>')
 
-
 def _gap(extra=''):
     return f'<span style="display:inline-flex;width:1.4em;height:2.2em;{extra}"></span>'
 
-
 def _line(em):
     return f'<div style="height:2px;background:#111;width:{em}em;margin:3px 0;"></div>'
-
 
 def _strike_cell(v, color=''):
     return (f'<span style="position:relative;display:inline-flex;width:1.4em;height:2.2em;'
@@ -179,35 +173,47 @@ def add_armada(A, B):
 
 
 def render_addition():
-    st.subheader("Adição com transporte (vai-um)")
-    A = int(st.number_input("Número de cima", value=6789, step=1, key="add_A"))
-    B = int(st.number_input("Número de baixo", value=4567, step=1, key="add_B"))
-    if st.button("Mostrar exemplo", key="add_ex"):
-        st.session_state.add_A, st.session_state.add_B = 6789, 4567
+    st.title("Addition with Carrying")
+    st.markdown("Column addition (armada) showing the carried digits above each column and the step-by-step column sums.")
+    
+    with st.container(border=True):
+        col1, col2, col3, col4 = st.columns([2, 2, 1, 2])
+        A = col1.number_input("Top number", value=7654, step=1, key="add_A")
+        B = col2.number_input("Bottom number", value=3823, step=1, key="add_B")
+        submit = col3.button("Add", use_container_width=True)
+        example = col4.button("Show example", icon="✨", use_container_width=True)
+        
+    if example:
+        st.session_state.add_A, st.session_state.add_B = 7654, 3823
         st.rerun()
+        
     d = add_armada(A, B)
-    rows = []
-    rows.append('<div>' + _gap() + ''.join(
-        _cell(c if c and c > 0 else None, 'color:#6b21a8;font-size:1em;height:1.3em;')
-        for c in d['carry']) + '</div>')
-    rows.append('<div>' + _gap() + ''.join(_cell(c) for c in d['top']) + '</div>')
-    rows.append('<div>' + _cell('+') + ''.join(_cell(c) for c in d['bottom']) + '</div>')
-    rows.append(_line(d['W'] * 1.4))
-    rows.append('<div>' + _gap() + ''.join(_cell(c, 'color:#dc2626;') for c in d['result']) + '</div>')
-    st.markdown(
-        f'<div style="display:inline-block;padding:1rem;">{"".join(rows)}</div>'
-        f'<div style="margin-top:.5rem;font-size:1.4em;font-weight:600">'
-        f'{d["A"]} + {d["B"]} = <span style="color:#dc2626">{d["total"]}</span></div>',
-        unsafe_allow_html=True)
-    st.markdown("**Passo a passo — cada coluna**")
-    lines = []
-    for c in reversed(d['cols']):
-        carry_txt = f"(vai {c['carryIn']}) " if c['carryIn'] > 0 else ''
-        extra = f" + {c['carryIn']}" if c['carryIn'] > 0 else ''
-        note = ", vai 1" if c['sum'] >= 10 else ''
-        lines.append(f"{carry_txt}{c['top']} + {c['bottom']}{extra} = {c['sum']} → escreve **{c['digit']}**{note}")
-    lines.append(f"**Soma final: {d['A']} + {d['B']} = {d['total']}**")
-    st.markdown('\n'.join('- ' + l for l in lines))
+    
+    with st.container(border=True):
+        rows = []
+        rows.append('<div>' + _gap() + ''.join(
+            _cell(c if c and c > 0 else None, 'color:#6b21a8;font-size:1em;height:1.3em;')
+            for c in d['carry']) + '</div>')
+        rows.append('<div>' + _gap() + ''.join(_cell(c) for c in d['top']) + '</div>')
+        rows.append('<div>' + _cell('+') + ''.join(_cell(c) for c in d['bottom']) + '</div>')
+        rows.append(_line(d['W'] * 1.4))
+        rows.append('<div>' + _gap() + ''.join(_cell(c, 'color:#dc2626;') for c in d['result']) + '</div>')
+        st.markdown(
+            f'<div style="font-size:1.4em;font-weight:600;margin-bottom:15px;">'
+            f'{d["A"]} + {d["B"]} = <span style="color:#dc2626">{d["total"]}</span></div>'
+            f'<div style="display:inline-block;padding:1rem;">{"".join(rows)}</div>',
+            unsafe_allow_html=True)
+            
+    with st.container(border=True):
+        st.markdown("**Step by step — each column**")
+        lines = []
+        for i, c in enumerate(reversed(d['cols']), 1):
+            carry_txt = f"(carry {c['carryIn']}) " if c['carryIn'] > 0 else ''
+            extra = f" + {c['carryIn']}" if c['carryIn'] > 0 else ''
+            note = f", carry {c['sum'] // 10}" if c['sum'] >= 10 else ''
+            lines.append(f"Column {i}: {c['top']} + {c['bottom']}{extra} = {c['sum']} &rarr; write {c['digit']}{note}")
+            
+        st.markdown('<br>'.join(lines) + f"<br><br>**Final sum: {d['A']} + {d['B']} = {d['total']}**", unsafe_allow_html=True)
 
 
 def subtract_armada(A, B):
@@ -248,50 +254,84 @@ def subtract_armada(A, B):
 
 
 def render_subtraction():
-    st.subheader("Subtração com empréstimo (vai-um)")
-    A = int(st.number_input("Número de cima", value=5003, step=1, key="sub_A"))
-    B = int(st.number_input("Número de baixo", value=2897, step=1, key="sub_B"))
-    if st.button("Mostrar exemplo", key="sub_ex"):
-        st.session_state.sub_A, st.session_state.sub_B = 5003, 2897
+    st.title("Subtraction with Borrowing")
+    st.markdown("Column subtraction (armada) showing crossed-out digits, borrowing, the place-value decomposition and the final signed answer.")
+    
+    with st.container(border=True):
+        col1, col2, col3, col4 = st.columns([2, 2, 1, 2])
+        A = col1.number_input("Top number", value=523, step=1, key="sub_A")
+        B = col2.number_input("Bottom number", value=268, step=1, key="sub_B")
+        submit = col3.button("Subtract", use_container_width=True)
+        example = col4.button("Show example", icon="✨", use_container_width=True)
+        
+    if example:
+        st.session_state.sub_A, st.session_state.sub_B = 523, 268
         st.rerun()
+        
     d = subtract_armada(A, B)
     w = len(d['top_arr'])
-    rows = []
-    row = _gap()
-    for c in d['columns']:
-        mark = None
-        if c['index'] in d['lent_by']:
-            mark = (d['lent_by'][c['index']]['newValue'], 'color:#2563eb')
-        elif c['borrowedFrom'] is not None:
-            mark = (c['displayedTop'], 'color:#dc2626')
-        if mark:
-            row += (f'<span style="display:inline-flex;width:1.4em;height:1.3em;'
-                    f'justify-content:center;align-items:center;font-size:1em;{mark[1]}">{mark[0]}</span>')
-        else:
-            row += _gap('height:1.3em;')
-    rows.append('<div>' + row + '</div>')
-    row = _gap()
-    for i, v in enumerate(d['top_arr']):
-        struck = i in d['lent_by'] or any(c['index'] == i and c['borrowedFrom'] is not None for c in d['columns'])
-        row += _strike_cell(v) if struck else _cell(v)
-    rows.append('<div>' + row + '</div>')
-    rows.append('<div>' + _cell('−') + ''.join(_cell(c) for c in d['bottom_arr']) + '</div>')
-    rows.append(_line(w * 1.4))
-    rows.append('<div>' + _gap() + ''.join(_cell(abs(c['result'])) for c in d['columns'])
-                + (_cell('−', 'color:#dc2626') if d['negative'] else '') + '</div>')
-    st.markdown(
-        f'<div style="display:inline-block;padding:1rem;">{"".join(rows)}</div>'
-        f'<div style="margin-top:.5rem;font-size:1.4em;font-weight:600">'
-        f'{d["A"]} − {d["B"]} = <span style="color:#dc2626">{d["result"]}</span></div>',
-        unsafe_allow_html=True)
-    st.markdown("**Passo a passo — cada coluna**")
-    lines = []
-    for c in d['columns']:
-        if c['borrowedFrom'] is not None:
-            lines.append(f"Empresta 1 da coluna {c['borrowedFrom'] + 1}: {c['originalTop']} → {c['displayedTop']}, então {c['displayedTop']} − {c['bottom']} = **{c['result']}**")
-        else:
-            lines.append(f"Coluna {c['index'] + 1}: {c['originalTop']} − {c['bottom']} = **{c['result']}**")
-    st.markdown('\n'.join('- ' + l for l in lines))
+    
+    with st.container(border=True):
+        st.markdown(f'<div style="font-size:1.4em;font-weight:600;margin-bottom:15px;">'
+                    f'{d["A"]} &minus; {d["B"]} = <span style="color:#111">{d["result"]}</span></div>',
+                    unsafe_allow_html=True)
+        
+        rows = []
+        row = _gap()
+        for c in d['columns']:
+            mark = None
+            if c['index'] in d['lent_by']:
+                mark = (d['lent_by'][c['index']]['newValue'], 'color:#2563eb')
+            elif c['borrowedFrom'] is not None:
+                mark = (c['displayedTop'], 'color:#dc2626')
+            if mark:
+                row += (f'<span style="display:inline-flex;width:1.4em;height:1.3em;'
+                        f'justify-content:center;align-items:center;font-size:1em;{mark[1]}">{mark[0]}</span>')
+            else:
+                row += _gap('height:1.3em;')
+        rows.append('<div>' + row + '</div>')
+        row = _gap()
+        for i, v in enumerate(d['top_arr']):
+            struck = i in d['lent_by'] or any(c['index'] == i and c['borrowedFrom'] is not None for c in d['columns'])
+            row += _strike_cell(v) if struck else _cell(v)
+        rows.append('<div>' + row + '</div>')
+        rows.append('<div>' + _cell('&minus;') + ''.join(_cell(c) for c in d['bottom_arr']) + '</div>')
+        rows.append(_line(w * 1.4))
+        rows.append('<div>' + _gap() + ''.join(_cell(abs(c['result'])) for c in d['columns'])
+                    + (_cell('&minus;', 'color:#dc2626') if d['negative'] else '') + '</div>')
+                    
+        st.markdown(f'<div style="display:inline-block;padding:1rem;">{"".join(rows)}</div>', unsafe_allow_html=True)
+        st.markdown(f"<div style='margin-top:10px;color:#555;'>Subtracting directly: {d['A']} &minus; {d['B']} = {d['result']}.</div>", unsafe_allow_html=True)
+
+    with st.container(border=True):
+        st.markdown("**Step by step — each column**")
+        lines = []
+        for i, c in enumerate(reversed(d['columns']), 1):
+            if c['borrowedFrom'] is not None:
+                lines.append(f"Borrow 1 from column {w - c['borrowedFrom']}: {c['originalTop']} &rarr; {c['displayedTop']}, then {c['displayedTop']} &minus; {c['bottom']} = {c['result']}")
+            else:
+                lines.append(f"Column {i}: {c['originalTop']} &minus; {c['bottom']} = {c['result']}")
+        st.markdown('<br>'.join(lines), unsafe_allow_html=True)
+        
+    with st.container(border=True):
+        st.markdown("**Place-value decomposition**")
+        places = ["units", "tens", "hundreds", "thousands", "ten thousands", "hundred thousands"]
+        decomp_lines = []
+        diff_sum = 0
+        for i in range(len(d['top_arr'])):
+            power = 10 ** (len(d['top_arr']) - 1 - i)
+            t_val = d['top_arr'][i] * power
+            b_val = d['bottom_arr'][i] * power
+            diff = t_val - b_val
+            diff_sum += diff
+            place_name = places[len(d['top_arr']) - 1 - i]
+            diff_str = f"+{diff}" if diff > 0 else str(diff)
+            decomp_lines.append(f"<div style='font-family:monospace;'>{t_val} - {b_val} &rarr; {place_name} (diff = {diff})</div>")
+        
+        diff_parts = [f"+{x*10**(len(d['top_arr'])-1-i)}" if (x*10**(len(d['top_arr'])-1-i))>0 else str(x*10**(len(d['top_arr'])-1-i)) for i,x in enumerate([c['originalTop'] - c['bottom'] for c in d['columns']])]
+        decomp_lines.append(f"<div style='font-family:monospace; margin-top:5px;'>{' '.join(diff_parts)} = {diff_sum}</div>")
+        
+        st.markdown("".join(decomp_lines), unsafe_allow_html=True)
 
 
 def multiply_armada(A, B):
@@ -337,46 +377,59 @@ def multiply_armada(A, B):
 
 
 def render_multiplication():
-    st.subheader("Multiplicação longa (armada)")
-    A = int(st.number_input("Multiplicando (cima)", value=234, step=1, key="mul_A"))
-    B = int(st.number_input("Multiplicador (baixo)", value=56, step=1, key="mul_B"))
-    if st.button("Mostrar exemplo", key="mul_ex"):
-        st.session_state.mul_A, st.session_state.mul_B = 234, 56
+    st.title("Long Multiplication")
+    st.markdown("Column multiplication (armada) with the carried digits in purple, every partial product shifted correctly, and the final sum.")
+    
+    with st.container(border=True):
+        col1, col2, col3, col4 = st.columns([2, 2, 1, 2])
+        A = col1.number_input("Multiplicand (top)", value=152, step=1, key="mul_A")
+        B = col2.number_input("Multiplier (bottom)", value=153, step=1, key="mul_B")
+        submit = col3.button("Multiply", use_container_width=True)
+        example = col4.button("Show example", icon="✨", use_container_width=True)
+        
+    if example:
+        st.session_state.mul_A, st.session_state.mul_B = 152, 153
         st.rerun()
+        
     d = multiply_armada(A, B)
-    rows = []
-    rows.append('<div>' + _gap() + ''.join(_cell(c) for c in d['top_cells']) + '</div>')
-    rows.append('<div>' + _cell('×') + ''.join(_cell(c) for c in d['bottom_cells']) + '</div>')
-    rows.append(_line(d['W'] * 1.4))
-    for idx, p in enumerate(d['partials']):
-        is_last = idx == len(d['partials']) - 1
-        rows.append('<div>' + _gap() + ''.join(
-            _cell(c if c is not None and c > 0 else None, 'color:#6b21a8;font-size:1em;height:1.3em;')
-            for c in p['carry_cells']) + '</div>')
-        row = _cell('+' if is_last else '')
-        for i, c in enumerate(p['cells']):
-            color = 'color:#2563eb' if (c is not None and i < len(p['carry_cells']) and p['carry_cells'][i]) else ''
-            row += _cell(c, color)
-        rows.append('<div>' + row + '</div>')
-    rows.append(_line(d['W'] * 1.4))
-    rows.append('<div>' + _gap() + ''.join(_cell(c, 'font-weight:800;') for c in d['sum_cells']) + '</div>')
-    st.markdown(
-        f'<div style="display:inline-block;padding:1rem;">{"".join(rows)}</div>'
-        f'<div style="margin-top:.5rem;font-size:1.4em;font-weight:600">'
-        f'{d["A"]} × {d["B"]} = <span style="color:#dc2626">{d["product"]}</span></div>',
-        unsafe_allow_html=True)
-    st.markdown("**Passo a passo**")
-    lines = []
-    for p in d['partials']:
-        lines.append(f"{d['A']} × {p['digit']} = {d['A'] * p['digit']} (produto parcial, deslocado {p['shift']} casa(s))")
-    lines.append(f"**Soma dos parciais = {d['A']} × {d['B']} = {d['product']}**")
-    st.markdown('\n'.join('- ' + l for l in lines))
+    
+    with st.container(border=True):
+        st.markdown(f'<div style="font-size:1.4em;font-weight:600;margin-bottom:15px;">'
+                    f'{d["A"]} &times; {d["B"]} = <span style="color:#dc2626">{d["product"]}</span></div>',
+                    unsafe_allow_html=True)
+                    
+        rows = []
+        rows.append('<div>' + _gap() + ''.join(_cell(c) for c in d['top_cells']) + '</div>')
+        rows.append('<div>' + _cell('&times;') + ''.join(_cell(c) for c in d['bottom_cells']) + '</div>')
+        rows.append(_line(d['W'] * 1.4))
+        for idx, p in enumerate(d['partials']):
+            is_last = idx == len(d['partials']) - 1
+            rows.append('<div>' + _gap() + ''.join(
+                _cell(c if c is not None and c > 0 else None, 'color:#6b21a8;font-size:1em;height:1.3em;')
+                for c in p['carry_cells']) + '</div>')
+            row = _cell('+' if is_last else '')
+            for i, c in enumerate(p['cells']):
+                color = 'color:#2563eb' if (c is not None and i < len(p['carry_cells']) and p['carry_cells'][i]) else ''
+                row += _cell(c, color)
+            rows.append('<div>' + row + '</div>')
+        rows.append(_line(d['W'] * 1.4))
+        rows.append('<div>' + _gap() + ''.join(_cell(c, 'font-weight:800;') for c in d['sum_cells']) + '</div>')
+        
+        st.markdown(f'<div style="display:inline-block;padding:1rem;">{"".join(rows)}</div>', unsafe_allow_html=True)
+
+    with st.container(border=True):
+        st.markdown("**Step by step**")
+        lines = []
+        for p in d['partials']:
+            lines.append(f"<div style='font-family:monospace;'>{d['A']} &times; {p['digit']} = {d['A'] * p['digit']} (partial product, shifted {p['shift']} place{'s' if p['shift'] != 1 else ''} left)</div>")
+        lines.append(f"<div style='font-family:monospace; margin-top:5px; font-weight:bold;'>Sum of partials = {d['A']} &times; {d['B']} = {d['product']}</div>")
+        st.markdown('\n'.join(lines), unsafe_allow_html=True)
 
 
 def long_divide(dividend, divisor):
     dividend, divisor = int(dividend), int(divisor)
     if divisor == 0:
-        return {'error': 'Divisão por zero é indefinida.'}
+        return {'error': 'Division by zero is undefined.'}
     neg = (dividend < 0) ^ (divisor < 0)
     dividend, divisor = abs(dividend), abs(divisor)
     digits = list(map(int, str(dividend)))
@@ -400,67 +453,146 @@ def long_divide(dividend, divisor):
     last_nonzero = max((i for i, s in enumerate(steps) if s['product'] > 0), default=-1)
     for i, s in enumerate(steps):
         s['moreWork'] = i < last_nonzero
-        s['bringDown'] = digits[s['endCol'] + 1] if s['moreWork'] and s['endCol'] + 1 < N else None
+        s['bringDown'] = digits[s['endCol'] + 1] if s['endCol'] + 1 < N else None
     quotient_str = ''.join(map(str, quotient_digits)) or '0'
     quotient = (-1 if neg else 1) * int(quotient_str)
     remainder = cur
     return {'dividend': dividend, 'divisor': divisor, 'quotient': quotient,
-            'remainder': remainder, 'quotient_str': quotient_str, 'steps': steps, 'neg': neg}
+            'remainder': remainder, 'quotient_str': quotient_str, 'steps': steps, 'neg': neg, 'digits': digits}
 
 
 def render_long_division():
-    st.subheader("Divisão longa (notação com chaves)")
-    dividend = int(st.number_input("Dividendo", value=4356, step=1, key="div_A"))
-    divisor = int(st.number_input("Divisor", value=12, step=1, key="div_B"))
-    if st.button("Mostrar exemplo", key="div_ex"):
-        st.session_state.div_A, st.session_state.div_B = 4356, 12
+    st.title("Long Division")
+    st.markdown("Classic long-division notation — divisor on the left, quotient on top, dividend inside the bracket — with each subtraction step, brought-down digits in orange, and the final remainder.")
+    
+    with st.container(border=True):
+        col1, col2, col3, col4 = st.columns([2, 2, 1, 2])
+        dividend = col1.number_input("Dividend", value=1250, step=1, key="div_A")
+        divisor = col2.number_input("Divisor", value=5, step=1, key="div_B")
+        submit = col3.button("Divide", use_container_width=True)
+        example = col4.button("Show example", icon="✨", use_container_width=True)
+        
+    if example:
+        st.session_state.div_A, st.session_state.div_B = 1250, 5
         st.rerun()
+        
     d = long_divide(dividend, divisor)
     if 'error' in d:
         st.error(d['error'])
         return
-    st.markdown(
-        f'<div style="font-family:ui-monospace,monospace;font-size:1.7em;padding:1rem;">'
-        f'<div style="margin-bottom:2px;color:#dc2626;font-weight:600;">'
-        f'{"&nbsp;"*(len(str(d["divisor"]))+2)}{d["quotient_str"]}</div>'
-        f'<div style="border-top:2px solid #111;border-left:2px solid #111;'
-        f'padding-left:.3em;padding-top:2px;display:inline-block;">'
-        f'{d["divisor"]})&nbsp;{d["dividend"]}</div></div>'
-        f'<div style="margin-top:.4rem;font-size:1.4em;font-weight:600">'
-        f'{d["dividend"]} ÷ {d["divisor"]} = <span style="color:#dc2626">{d["quotient"]}</span>'
-        f'{" (resto " + str(d["remainder"]) + ")" if d["remainder"] else ""}</div>',
-        unsafe_allow_html=True)
-    st.markdown("**Passo a passo**")
-    lines = []
-    for s in d['steps']:
-        line = f"{s['working']} ÷ {d['divisor']} = {s['qDigit']} → {s['qDigit']} × {d['divisor']} = {s['product']}; {s['working']} − {s['product']} = **{s['remainder']}**"
-        if s['bringDown'] is not None:
-            line += f"; baixa {s['bringDown']} → {s['remainder'] * 10 + s['bringDown']}"
-        lines.append(line)
-    lines.append(f"**Quociente: {d['quotient']}**"
-                 + (f", resto {d['remainder']}" if d['remainder'] else " (divisão exata)"))
-    st.markdown('\n'.join('- ' + l for l in lines))
+        
+    with st.container(border=True):
+        # Draw the L-shaped bracket layout
+        left_html = f"<div style='display:flex; flex-direction:column; align-items:flex-end;'>"
+        
+        # Header / bars
+        bars = "<div style='display:flex; justify-content:flex-end; gap:5px; margin-bottom:5px;'>"
+        colors = ["#4285F4", "#EA4335", "#FBBC05", "#34A853"]
+        for i, s in enumerate(d['steps']):
+            w = len(str(s['working']))
+            bars += f"<div style='height:4px; width:{w*1.5}em; background-color:{colors[i%len(colors)]}; border-radius:2px;'></div>"
+        bars += "</div>"
+        left_html += bars
+        
+        # Dividend
+        left_html += f"<div style='letter-spacing:0.8em; font-weight:bold;'>{''.join(map(str, d['digits']))}</div>"
+        
+        # Steps
+        indent = 0
+        for i, s in enumerate(d['steps']):
+            # Product
+            prod_str = str(s['product'])
+            bd_str = f"<span style='color:#E67C22;'>{s['bringDown']}</span>" if s['bringDown'] is not None else ""
+            
+            left_html += f"<div style='display:flex; justify-content:flex-end; margin-top:5px; padding-right: {len(d['digits']) - 1 - s['endCol']}em;'>"
+            left_html += f"<div style='margin-right:10px;'>-</div>"
+            left_html += f"<div style='letter-spacing:0.8em; border-bottom: 2px solid #111; padding-bottom:5px;'>{''.join(prod_str)}</div>"
+            left_html += f"</div>"
+            
+            # Remainder
+            rem_str = str(s['remainder']).zfill(len(str(s['working'])) - len(prod_str) + 1)
+            left_html += f"<div style='display:flex; justify-content:flex-end; padding-right: {len(d['digits']) - 1 - s['endCol']}em; margin-top:5px;'>"
+            left_html += f"<div style='letter-spacing:0.8em;'>{''.join(rem_str)} {bd_str}</div>"
+            left_html += f"</div>"
+            
+        left_html += "</div>"
+        
+        right_html = f"""
+        <div style="border-left: 2px solid #111; padding-left: 20px; height: 100%; display: flex; flex-direction: column;">
+            <div style="font-weight:bold; letter-spacing:0.2em;">{d['divisor']}</div>
+            <div style="border-top: 2px solid #111; padding-top: 10px; color: #34A853; font-weight:bold; letter-spacing:0.5em; margin-top: 5px;">
+                {d['quotient_str']}
+            </div>
+        </div>
+        """
+        
+        st.markdown(f"""
+        <div style="display:flex; font-family: ui-monospace, monospace; font-size: 1.5em; padding: 20px;">
+            <div style="flex: 1; display:flex; justify-content:flex-end; padding-right: 20px;">
+                {left_html}
+            </div>
+            <div style="flex: 1;">
+                {right_html}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with st.container(border=True):
+        st.markdown("##### Result")
+        st.markdown(f"<div style='font-family:monospace; font-size:1.2em;'>{d['dividend']} &divide; {d['divisor']} = <span style='color:#34A853;'>{d['quotient']}</span></div>", unsafe_allow_html=True)
+        
+    with st.container(border=True):
+        st.markdown("**Step by step**")
+        lines = []
+        for i, s in enumerate(d['steps'], 1):
+            line = f"Step {i}: Working number {s['working']} &divide; {d['divisor']} = <span style='color:#34A853; font-weight:bold;'>{s['qDigit']}</span>. "
+            line += f"{s['qDigit']} &times; {d['divisor']} = {s['product']}. Subtract &rarr; remainder <span style='color:#673AB7; font-weight:bold;'>{s['remainder']}</span>"
+            if s['bringDown'] is not None:
+                line += f"; bring down <span style='color:#E67C22; font-weight:bold;'>{s['bringDown']}</span>."
+            else:
+                line += "."
+            lines.append(f"<div style='font-family:monospace; margin-bottom:10px;'>{line}</div>")
+        
+        lines.append(f"<div style='font-family:monospace; margin-top:15px; font-weight:bold;'>Quotient: <span style='color:#34A853;'>{d['quotient']}</span></div>")
+        st.markdown("".join(lines), unsafe_allow_html=True)
 
 
 # =============================================================================
-#  CÁLCULO
+#  CALCULUS
 # =============================================================================
 def solve_limit(expr_str, point):
     f = parse_expr(expr_str)
     x = X
     p = sp.nsimplify(point)
-    lim = sp.limit(f, x, p)
     sub = f.subs(x, p)
-    steps = [("Enunciado", f"$$\\lim_{{x \\to {sp.latex(p)}}} {sp.latex(f)}$$")]
-    steps.append(("Substituição direta", f"$$f({sp.latex(p)}) = {sp.latex(sp.simplify(sub))}$$"))
-    if sub == sp.zoo or sub.has(sp.nan) or (getattr(sub, 'is_infinite', None) and sub.is_infinite):
-        steps.append(("Forma indeterminada", "A substituição direta dá uma forma infinita/indeterminada; é preciso simplificar algebricamente."))
-    steps.append(("Cálculo do limite", f"$$\\lim_{{x \\to {sp.latex(p)}}} {sp.latex(f)} = {sp.latex(lim)}$$"))
+    
+    num_part, den_part = f.as_numer_denom()
+    sub_num = num_part.subs(x, p)
+    sub_den = den_part.subs(x, p)
+    
+    steps = [("Define the limit", f"We are tasked to evaluate the limit $L = \\lim_{{x \\to {sp.latex(p)}}} {sp.latex(f)}$.")]
+
+    if sub_num == 0 and sub_den == 0:
+        steps.append(("Perform direct substitution", f"Substituting $x = {sp.latex(p)}$ into the function gives $\\frac{{0}}{{0}}$. This is an indeterminate form."))
+        deriv_num = sp.diff(num_part, x)
+        deriv_den = sp.diff(den_part, x)
+        steps.append(("Apply L'Hôpital's Rule", f"Since the limit results in an indeterminate form $\\frac{{0}}{{0}}$, we can apply L'Hôpital's Rule, which states that $\\lim_{{x \\to c}} \\frac{{f(x)}}{{g(x)}} = \\lim_{{x \\to c}} \\frac{{f'(x)}}{{g'(x)}}$."))
+        steps.append(("Differentiate numerator and denominator", f"Differentiating the numerator $\\frac{{d}}{{dx}}\\left({sp.latex(num_part)}\\right) = {sp.latex(deriv_num)}$ and the denominator $\\frac{{d}}{{dx}}\\left({sp.latex(den_part)}\\right) = {sp.latex(deriv_den)}$."))
+        lim = sp.limit(deriv_num/deriv_den, x, p)
+        steps.append(("Evaluate the new limit", f"We now evaluate $\\lim_{{x \\to {sp.latex(p)}}} \\frac{{{sp.latex(deriv_num)}}}{{{sp.latex(deriv_den)}}} = {sp.latex(lim)}$."))
+    else:
+        steps.append(("Perform direct substitution", f"Substituting $x = {sp.latex(p)}$ gives $f({sp.latex(p)}) = {sp.latex(sp.simplify(sub))}$."))
+        if sub == sp.zoo or sub.has(sp.nan) or (getattr(sub, 'is_infinite', None) and sub.is_infinite):
+            steps.append(("Indeterminate form", "Direct substitution results in an infinite/indeterminate form; algebraic simplification is needed."))
+        lim = sp.limit(f, x, p)
+        steps.append(("Calculate the limit", f"$\\lim_{{x \\to {sp.latex(p)}}} {sp.latex(f)} = {sp.latex(lim)}$"))
+        
     try:
         near = [f.subs(x, p + sp.Rational(1, 10**k)) for k in range(1, 4)]
-        steps.append(("Verificação numérica", "Valores próximos: " + ", ".join(f"{sp.latex(p + sp.Rational(1,10**k))} → {sp.latex(sp.N(v,5))}" for k, v in enumerate(near, 1))))
+        steps.append(("Numerical verification", "Values close to the point: " + ", ".join(f"{sp.latex(p + sp.Rational(1,10**k))} \\to {sp.latex(sp.N(v,5))}" for k, v in enumerate(near, 1))))
     except Exception:
         pass
+        
     final = f"\\lim_{{x \\to {sp.latex(p)}}} {sp.latex(f)} = {sp.latex(lim)}"
     yv = num(lim)
     plot = {'exprs': [{'expr': for_plot(f, x), 'label': 'f(x)'}],
@@ -470,12 +602,21 @@ def solve_limit(expr_str, point):
 
 
 def render_limit():
-    st.subheader("Limites")
-    expr = st.text_input("Função f(x)", value="sin(x)/x", key="lim_expr")
-    point = st.number_input("x tende a", value=0.0, key="lim_point")
-    if st.button("Mostrar exemplo", key="lim_ex"):
+    st.title("Limits")
+    st.markdown("Direct substitution, algebraic manipulation and L'Hôpital's rule — with a graph near the point.")
+    
+    with st.container(border=True):
+        expr = st.text_input("Function f(x)", value="sin(x)/x", key="lim_expr")
+        point = st.number_input("x approaches", value=0.0, key="lim_point")
+        
+        col1, col2 = st.columns([1, 4])
+        submit = col1.button("Solve", use_container_width=True)
+        example = col2.button("Show example", icon="✨")
+        
+    if example:
         st.session_state.lim_expr, st.session_state.lim_point = "sin(x)/x", 0.0
         st.rerun()
+        
     try:
         steps, final, plot = solve_limit(expr, point)
         _show(steps, final, plot)
@@ -495,27 +636,33 @@ def solve_derivative_limit(expr_str, point, var_name='x'):
     f_pt = f.subs(x, point)
     tangent = sp.simplify(f_pt + slope * (x - point))
     steps = [
-        ("Definição", f"$$f'({sp.latex(x)}) = \\lim_{{h \\to 0}} \\frac{{f({sp.latex(x)}+h)-f({sp.latex(x)})}}{{h}}$$"),
-        ("Calcula f(x+h)", f"$$f({sp.latex(x)}+h) = {sp.latex(f_xh)}$$"),
-        ("Quociente das diferenças", f"$$\\frac{{f({sp.latex(x)}+h)-f({sp.latex(x)})}}{{h}} = {sp.latex(quotient)}$$"),
-        ("Tomar o limite h→0", f"$$f'({sp.latex(x)}) = \\lim_{{h\\to0}} {sp.latex(quotient)} = {sp.latex(deriv)}$$"),
-        ("Inclinação no ponto", f"$$f'({sp.latex(point)}) = {sp.latex(slope)}$$"),
-        ("Reta tangente", f"$$y = {sp.latex(tangent)}$$"),
+        ("Definition", f"$$f'({sp.latex(x)}) = \\lim_{{h \\to 0}} \\frac{{f({sp.latex(x)}+h)-f({sp.latex(x)})}}{{h}}$$"),
+        ("Calculate f(x+h)", f"$$f({sp.latex(x)}+h) = {sp.latex(f_xh)}$$"),
+        ("Difference quotient", f"$$\\frac{{f({sp.latex(x)}+h)-f({sp.latex(x)})}}{{h}} = {sp.latex(quotient)}$$"),
+        ("Take the limit h→0", f"$$f'({sp.latex(x)}) = \\lim_{{h\\to0}} {sp.latex(quotient)} = {sp.latex(deriv)}$$"),
+        ("Slope at the point", f"$$f'({sp.latex(point)}) = {sp.latex(slope)}$$"),
+        ("Tangent line", f"$$y = {sp.latex(tangent)}$$"),
     ]
     final = f"f'({sp.latex(x)}) = {sp.latex(deriv)}, \\quad y = {sp.latex(tangent)}"
     yv = num(f_pt)
     plot = {'exprs': [{'expr': for_plot(f, x), 'label': 'f(x)'},
-                      {'expr': for_plot(tangent, x), 'label': 'tangente', 'dashed': True, 'color': 'orange'}],
+                      {'expr': for_plot(tangent, x), 'label': 'tangent', 'dashed': True, 'color': 'orange'}],
             'x_min': float(point) - 4, 'x_max': float(point) + 4,
             'points': [{'x': float(point), 'y': yv, 'label': f'({point}, {f_pt})'}] if yv is not None else None}
     return steps, final, plot
 
 
 def render_derivative_limit():
-    st.subheader("Derivada — definição por limite")
-    expr = st.text_input("f(x)", value="x^2", key="dl_expr")
-    point = st.number_input("No ponto x =", value=1.0, key="dl_point")
-    if st.button("Mostrar exemplo", key="dl_ex"):
+    st.title("Derivative — Limit Definition")
+    
+    with st.container(border=True):
+        expr = st.text_input("f(x)", value="x^2", key="dl_expr")
+        point = st.number_input("At point x =", value=1.0, key="dl_point")
+        col1, col2 = st.columns([1, 4])
+        submit = col1.button("Solve", use_container_width=True)
+        example = col2.button("Show example", icon="✨")
+        
+    if example:
         st.session_state.dl_expr, st.session_state.dl_point = "x^2", 1.0
         st.rerun()
     try:
@@ -534,10 +681,10 @@ def solve_integral_limit(expr_str, a, b, n, var_name='x'):
     riemann = sum(float(f.subs(x, a + i * dx)) * dx for i in range(1, n + 1))
     exact = sp.integrate(f, (x, a, b))
     steps = [
-        ("Definição", f"$$\\int_{{{sp.latex(a)}}}^{{{sp.latex(b)}}} {sp.latex(f)}\\,dx = \\lim_{{n\\to\\infty}} \\sum_{{i=1}}^{{n}} f(x_i)\\,\\Delta x$$"),
-        ("Largura e pontos", f"$$\\Delta x = \\frac{{{b}-{a}}}{{{n}}} = {dx}, \\quad x_i = {a} + i\\Delta x$$"),
-        ("Soma de Riemann (n=" + str(n) + ")", f"$$S_{{{n}}} = \\sum_{{i=1}}^{{{n}}} f(x_i)\\,\\Delta x = {round(riemann, 4)}$$"),
-        ("Integral exata", f"$$\\int_{{{a}}}^{{{b}}} {sp.latex(f)}\\,dx = {sp.latex(exact)} = {sp.latex(sp.N(exact, 5))}$$"),
+        ("Definition", f"$$\\int_{{{sp.latex(a)}}}^{{{sp.latex(b)}}} {sp.latex(f)}\\,dx = \\lim_{{n\\to\\infty}} \\sum_{{i=1}}^{{n}} f(x_i)\\,\\Delta x$$"),
+        ("Width and points", f"$$\\Delta x = \\frac{{{b}-{a}}}{{{n}}} = {dx}, \\quad x_i = {a} + i\\Delta x$$"),
+        (f"Riemann sum (n={n})", f"$$S_{{{n}}} = \\sum_{{i=1}}^{{{n}}} f(x_i)\\,\\Delta x = {round(riemann, 4)}$$"),
+        ("Exact integral", f"$$\\int_{{{a}}}^{{{b}}} {sp.latex(f)}\\,dx = {sp.latex(exact)} = {sp.latex(sp.N(exact, 5))}$$"),
     ]
     final = f"\\int_{{{a}}}^{{{b}}} {sp.latex(f)}\\,dx = {sp.latex(exact)}"
     plot = {'exprs': [{'expr': for_plot(f, x), 'label': 'f(x)'}],
@@ -547,12 +694,20 @@ def solve_integral_limit(expr_str, a, b, n, var_name='x'):
 
 
 def render_integral_limit():
-    st.subheader("Integral — limite das somas de Riemann")
-    expr = st.text_input("f(x)", value="x^2", key="il_expr")
-    a = st.number_input("Limite inferior a", value=0.0, key="il_a")
-    b = st.number_input("Limite superior b", value=2.0, key="il_b")
-    n = st.number_input("Retângulos n", value=5, step=1, key="il_n")
-    if st.button("Mostrar exemplo", key="il_ex"):
+    st.title("Integral — Riemann Sums Limit")
+    
+    with st.container(border=True):
+        expr = st.text_input("f(x)", value="x^2", key="il_expr")
+        col1, col2, col3 = st.columns(3)
+        a = col1.number_input("Lower limit a", value=0.0, key="il_a")
+        b = col2.number_input("Upper limit b", value=2.0, key="il_b")
+        n = col3.number_input("Rectangles n", value=5, step=1, key="il_n")
+        
+        c1, c2 = st.columns([1, 4])
+        submit = c1.button("Solve", use_container_width=True)
+        example = c2.button("Show example", icon="✨")
+        
+    if example:
         st.session_state.il_expr, st.session_state.il_a, st.session_state.il_b, st.session_state.il_n = "x^2", 0.0, 2.0, 5
         st.rerun()
     try:
@@ -567,17 +722,17 @@ def solve_derivative(expr_str, var_name, rule):
     x = var
     f = parse_expr(expr_str, var_name)
     deriv = sp.diff(f, x)
-    steps = [("Função", f"$$f({sp.latex(x)}) = {sp.latex(f)}$$")]
+    steps = [("Function", f"$$f({sp.latex(x)}) = {sp.latex(f)}$$")]
     if f.is_Add:
-        steps.append(("Regra da soma", "Aplique a regra da soma, derivando termo a termo."))
+        steps.append(("Sum rule", "Apply the sum rule, differentiating term by term."))
         parts = []
         for term in sp.Add.make_args(f):
             d = sp.diff(term, x)
             parts.append(f"\\frac{{d}}{{d{sp.latex(x)}}}\\left({sp.latex(term)}\\right) = {sp.latex(d)}")
-        steps.append(("Derivando cada termo", "$$" + " \\quad ".join(parts) + "$$"))
+        steps.append(("Differentiating each term", "$$" + " \\quad ".join(parts) + "$$"))
     else:
-        steps.append(("Aplicar regras", f"Aplique a regra **{rule}**."))
-    steps.append(("Resultado", f"$$f'({sp.latex(x)}) = {sp.latex(deriv)}$$"))
+        steps.append(("Apply rules", f"Apply the **{rule}** rule."))
+    steps.append(("Result", f"$$f'({sp.latex(x)}) = {sp.latex(deriv)}$$"))
     final = f"f'({sp.latex(x)}) = {sp.latex(deriv)}"
     plot = {'exprs': [{'expr': for_plot(f, x), 'label': 'f(x)'},
                       {'expr': for_plot(deriv, x), 'label': "f'(x)", 'dashed': True, 'color': 'green'}],
@@ -586,13 +741,20 @@ def solve_derivative(expr_str, var_name, rule):
 
 
 def render_derivative():
-    st.subheader("Derivadas — regras")
-    expr = st.text_input("f(variável)", value="x^3 + 2*x^2 + sin(x)", key="der_expr")
-    col1, col2 = st.columns(2)
-    variable = col1.selectbox("Variável", ['x', 'y', 'z'], key="der_var")
-    rule = col2.selectbox("Regra a demonstrar", ['Geral', 'Constante', 'Potência', 'Soma/Diferença', 'Produto', 'Quociente', 'Cadeia'], key="der_rule")
-    if st.button("Mostrar exemplo", key="der_ex"):
-        st.session_state.der_expr, st.session_state.der_var, st.session_state.der_rule = "x^3 + 2*x^2 + sin(x)", "x", "Geral"
+    st.title("Derivatives — Rules")
+    
+    with st.container(border=True):
+        expr = st.text_input("f(variable)", value="x^3 + 2*x^2 + sin(x)", key="der_expr")
+        col1, col2 = st.columns(2)
+        variable = col1.selectbox("Variable", ['x', 'y', 'z'], key="der_var")
+        rule = col2.selectbox("Rule to demonstrate", ['General', 'Constant', 'Power', 'Sum/Difference', 'Product', 'Quotient', 'Chain'], key="der_rule")
+        
+        c1, c2 = st.columns([1, 4])
+        submit = c1.button("Solve", use_container_width=True)
+        example = c2.button("Show example", icon="✨")
+        
+    if example:
+        st.session_state.der_expr, st.session_state.der_var, st.session_state.der_rule = "x^3 + 2*x^2 + sin(x)", "x", "General"
         st.rerun()
     try:
         steps, final, plot = solve_derivative(expr, variable, rule)
@@ -610,9 +772,9 @@ def solve_integral(expr_str, var_name, rule, kind, a, b):
         result = sp.integrate(f, (x, a, b))
         steps = [
             ("Integral", f"$$\\int_{{{a}}}^{{{b}}} {sp.latex(f)}\\,d{sp.latex(x)}$$"),
-            ("Método", f"Regra: **{rule}**."),
-            ("Aplicar Teorema Fundamental", f"Encontre a antiderivada F, depois calcule F({b}) − F({a})."),
-            ("Resultado", f"$$\\int_{{{a}}}^{{{b}}} {sp.latex(f)}\\,d{sp.latex(x)} = {sp.latex(result)}$$"),
+            ("Method", f"Rule: **{rule}**."),
+            ("Apply Fundamental Theorem", f"Find the antiderivative F, then calculate F({b}) − F({a})."),
+            ("Result", f"$$\\int_{{{a}}}^{{{b}}} {sp.latex(f)}\\,d{sp.latex(x)} = {sp.latex(result)}$$"),
         ]
         final = f"\\int_{{{a}}}^{{{b}}} {sp.latex(f)}\\,d{sp.latex(x)} = {sp.latex(result)}"
         plot = {'exprs': [{'expr': for_plot(f, x), 'label': 'f(x)'}],
@@ -622,9 +784,9 @@ def solve_integral(expr_str, var_name, rule, kind, a, b):
         result = sp.integrate(f, x)
         steps = [
             ("Integral", f"$$\\int {sp.latex(f)}\\,d{sp.latex(x)}$$"),
-            ("Método", f"Regra: **{rule}**."),
-            ("Antiderivada", f"$$\\int {sp.latex(f)}\\,d{sp.latex(x)} = {sp.latex(result)} + C$$"),
-            ("Verificação", "Derive o resultado para confirmar."),
+            ("Method", f"Rule: **{rule}**."),
+            ("Antiderivative", f"$$\\int {sp.latex(f)}\\,d{sp.latex(x)} = {sp.latex(result)} + C$$"),
+            ("Verification", "Differentiate the result to confirm."),
         ]
         final = f"\\int {sp.latex(f)}\\,d{sp.latex(x)} = {sp.latex(result)} + C"
         plot = None
@@ -632,18 +794,27 @@ def solve_integral(expr_str, var_name, rule, kind, a, b):
 
 
 def render_integral():
-    st.subheader("Integrais — regras")
-    expr = st.text_input("Integrando", value="x^2 + 3*x + 2", key="int_expr")
-    col1, col2 = st.columns(2)
-    variable = col1.selectbox("Variável", ['x', 'y', 'z'], key="int_var")
-    rule = col2.selectbox("Método/regra", ['Primitivas', 'Substituição', 'Por partes', 'Definida', 'Indefinida', 'Teorema Fundamental'], key="int_rule")
-    definite = rule in ('Definida', 'Teorema Fundamental')
-    a = b = 0.0
-    if definite:
-        a = st.number_input("Limite inferior a", value=0.0, key="int_a")
-        b = st.number_input("Limite superior b", value=2.0, key="int_b")
-    if st.button("Mostrar exemplo", key="int_ex"):
-        st.session_state.int_expr, st.session_state.int_var, st.session_state.int_rule = "x^2 + 3*x + 2", "x", "Indefinida"
+    st.title("Integrals — Rules")
+    
+    with st.container(border=True):
+        expr = st.text_input("Integrand", value="x^2 + 3*x + 2", key="int_expr")
+        col1, col2 = st.columns(2)
+        variable = col1.selectbox("Variable", ['x', 'y', 'z'], key="int_var")
+        rule = col2.selectbox("Method/Rule", ['Primitives', 'Substitution', 'By parts', 'Definite', 'Indefinite', 'Fundamental Theorem'], key="int_rule")
+        
+        definite = rule in ('Definite', 'Fundamental Theorem')
+        a = b = 0.0
+        if definite:
+            c_a, c_b = st.columns(2)
+            a = c_a.number_input("Lower limit a", value=0.0, key="int_a")
+            b = c_b.number_input("Upper limit b", value=2.0, key="int_b")
+            
+        c1, c2 = st.columns([1, 4])
+        submit = c1.button("Solve", use_container_width=True)
+        example = c2.button("Show example", icon="✨")
+        
+    if example:
+        st.session_state.int_expr, st.session_state.int_var, st.session_state.int_rule = "x^2 + 3*x + 2", "x", "Indefinite"
         st.rerun()
     try:
         steps, final, plot = solve_integral(expr, variable, rule,
@@ -654,7 +825,7 @@ def render_integral():
 
 
 # =============================================================================
-#  ÁLGEBRA
+#  ALGEBRA
 # =============================================================================
 def solve_linear(eq_str):
     eq = parse_equation(eq_str)
@@ -662,21 +833,21 @@ def solve_linear(eq_str):
     poly = sp.Poly(eq, x)
     coeffs = poly.all_coeffs()
     if len(coeffs) > 2:
-        raise ValueError("A equação não é do 1º grau.")
+        raise ValueError("Equation is not linear (1st degree).")
     a = coeffs[0]
     b = coeffs[1] if len(coeffs) == 2 else 0
     if a == 0:
-        raise ValueError("Coeficiente de x é zero — não é equação do 1º grau.")
+        raise ValueError("Coefficient of x is zero — not a linear equation.")
     root = sp.simplify(-b / a)
     lhs = parse_expr(eq_str.split('=')[0])
     rhs = parse_expr(eq_str.split('=')[1])
     steps = [
-        ("Equação original", f"$$ {sp.latex(sp.Eq(lhs, rhs))} $$"),
-        ("Forma padrão", f"$$ {sp.latex(a)}\\,x + {sp.latex(b)} = 0 $$"),
-        ("Identificar coeficientes", f"$$a = {sp.latex(a)}, \\quad b = {sp.latex(b)}$$"),
-        ("Isolar x", f"$$a\\,x = -b \\implies x = \\frac{{-b}}{{a}} = \\frac{{{sp.latex(-b)}}}{{{sp.latex(a)}}}$$"),
-        ("Resultado", f"$$x = {sp.latex(root)}$$"),
-        ("Verificação", f"Substituindo x = {sp.latex(root)}: {sp.latex(sp.simplify(eq.subs(x, root)))} = 0 ✓"),
+        ("Original equation", f"$$ {sp.latex(sp.Eq(lhs, rhs))} $$"),
+        ("Standard form", f"$$ {sp.latex(a)}\\,x + {sp.latex(b)} = 0 $$"),
+        ("Identify coefficients", f"$$a = {sp.latex(a)}, \\quad b = {sp.latex(b)}$$"),
+        ("Isolate x", f"$$a\\,x = -b \\implies x = \\frac{{-b}}{{a}} = \\frac{{{sp.latex(-b)}}}{{{sp.latex(a)}}}$$"),
+        ("Result", f"$$x = {sp.latex(root)}$$"),
+        ("Verification", f"Substituting x = {sp.latex(root)}: {sp.latex(sp.simplify(eq.subs(x, root)))} = 0 ✓"),
     ]
     final = f"x = {sp.latex(root)}"
     rv = num(root)
@@ -688,9 +859,15 @@ def solve_linear(eq_str):
 
 
 def render_linear():
-    st.subheader("Equação linear (1º grau)")
-    eq = st.text_input("Equação", value="2*x + 3 = 7", key="lin_eq")
-    if st.button("Mostrar exemplo", key="lin_ex"):
+    st.title("Linear Equation (1st degree)")
+    
+    with st.container(border=True):
+        eq = st.text_input("Equation", value="2*x + 3 = 7", key="lin_eq")
+        col1, col2 = st.columns([1, 4])
+        submit = col1.button("Solve", use_container_width=True)
+        example = col2.button("Show example", icon="✨")
+        
+    if example:
         st.session_state.lin_eq = "2*x + 3 = 7"
         st.rerun()
     try:
@@ -706,38 +883,42 @@ def solve_quadratic(eq_str):
     poly = sp.Poly(eq, x)
     coeffs = poly.all_coeffs()
     if len(coeffs) != 3:
-        raise ValueError("A equação precisa ser do 2º grau (a·x² + b·x + c).")
+        raise ValueError("Equation must be quadratic (a·x² + b·x + c).")
     a, b, c = coeffs
     disc = sp.simplify(b**2 - 4 * a * c)
     roots = sp.solve(eq, x)
     lhs = parse_expr(eq_str.split('=')[0])
     rhs = parse_expr(eq_str.split('=')[1])
     steps = [
-        ("Equação original", f"$$ {sp.latex(sp.Eq(lhs, rhs))} $$"),
-        ("Forma padrão", f"$$ {sp.latex(a)}\\,x^2 + {sp.latex(b)}\\,x + {sp.latex(c)} = 0 $$"),
-        ("Coeficientes", f"$$a = {sp.latex(a)}, \\quad b = {sp.latex(b)}, \\quad c = {sp.latex(c)}$$"),
-        ("Discriminante", f"$$\\Delta = b^2 - 4ac = {sp.latex(b)}^2 - 4({sp.latex(a)})({sp.latex(c)}) = {sp.latex(disc)}$$"),
-        ("Fórmula de Bhaskara", f"$$x = \\frac{{-b \\pm \\sqrt{{\\Delta}}}}{{2a}} = \\frac{{{sp.latex(-b)} \\pm \\sqrt{{{sp.latex(disc)}}}}}{{{sp.latex(2*a)}}}$$"),
-        ("Soluções", f"$$x = {sp.latex(roots)}$$"),
+        ("Original equation", f"$$ {sp.latex(sp.Eq(lhs, rhs))} $$"),
+        ("Standard form", f"$$ {sp.latex(a)}\\,x^2 + {sp.latex(b)}\\,x + {sp.latex(c)} = 0 $$"),
+        ("Coefficients", f"$$a = {sp.latex(a)}, \\quad b = {sp.latex(b)}, \\quad c = {sp.latex(c)}$$"),
+        ("Discriminant", f"$$\\Delta = b^2 - 4ac = ({sp.latex(b)})^2 - 4({sp.latex(a)})({sp.latex(c)}) = {sp.latex(disc)}$$"),
+        ("Quadratic formula", f"$$x = \\frac{{-b \\pm \\sqrt{{\\Delta}}}}{{2a}} = \\frac{{-({sp.latex(b)}) \\pm \\sqrt{{{sp.latex(disc)}}}}}{{{sp.latex(2*a)}}}$$"),
+        ("Solutions", f"$$x = {sp.latex(roots)}$$"),
     ]
     final = "x = " + (", \\quad ".join(sp.latex(r) for r in roots) if isinstance(roots, list) else sp.latex(roots))
+    
     real_roots = [num(r) for r in roots if isinstance(roots, list) and num(r) is not None and abs(num(r).imag) < 1e-9]
-    pts = [{'x': float(r.real), 'y': 0.0, 'label': f'x={r.real:.3g}'} for r in real_roots] if real_roots else None
-    if real_roots:
-        cx = sum(r.real for r in real_roots) / len(real_roots)
-        span = max(3, max(abs(r.real - cx) for r in real_roots) + 2)
-        xmin, xmax = cx - span, cx + span
-    else:
-        xmin, xmax = -5, 5
+    points = [{'x': r, 'y': 0, 'label': f'Root', 'color': 'red'} for r in real_roots]
+    
     plot = {'exprs': [{'expr': for_plot(eq, x), 'label': 'a·x² + b·x + c'}],
-            'x_min': xmin, 'x_max': xmax, 'points': pts}
+            'x_min': min(real_roots) - 5 if real_roots else -5,
+            'x_max': max(real_roots) + 5 if real_roots else 5,
+            'points': points if points else None}
+            
     return steps, final, plot
 
-
 def render_quadratic():
-    st.subheader("Equação quadrática (2º grau)")
-    eq = st.text_input("Equação", value="x^2 - 5*x + 6 = 0", key="quad_eq")
-    if st.button("Mostrar exemplo", key="quad_ex"):
+    st.title("Quadratic Equation")
+    
+    with st.container(border=True):
+        eq = st.text_input("Equation", value="x^2 - 5*x + 6 = 0", key="quad_eq")
+        col1, col2 = st.columns([1, 4])
+        submit = col1.button("Solve", use_container_width=True)
+        example = col2.button("Show example", icon="✨")
+        
+    if example:
         st.session_state.quad_eq = "x^2 - 5*x + 6 = 0"
         st.rerun()
     try:
@@ -747,88 +928,101 @@ def render_quadratic():
         st.error(str(ex))
 
 
-def solve_system(equations, variables):
-    syms = [sp.Symbol(v) for v in variables]
-    eqs = [parse_equation(e) for e in equations]
-    A, bb = sp.linear_eq_to_matrix(eqs, syms)
-    sol = sp.linsolve((A, bb), syms)
-    aug = A.row_join(bb)
-    rref, pivots = aug.rref()
-    cases = []
-    for i in range(A.rows):
-        lhs = sp.Add(*[A[i, j] * syms[j] for j in range(len(syms))])
-        cases.append(sp.latex(sp.Eq(lhs, bb[i])))
+def solve_linear_system(eq1_str, eq2_str):
+    eq1 = parse_equation(eq1_str)
+    eq2 = parse_equation(eq2_str)
+    
+    sol = sp.solve((eq1, eq2), (X, Y))
+    
     steps = [
-        ("Sistema", "$$\\begin{cases}" + " \\\ ".join(cases) + "\\end{cases}$$"),
-        ("Forma matricial", f"$$A = {sp.latex(A)}, \\quad b = {sp.latex(bb)}$$"),
-        ("Matriz aumentada [A | b]", f"$$[A \\mid b] = {sp.latex(aug)}$$"),
-        ("Forma escalonada (RREF)", f"$$\\text{{RREF}} = {sp.latex(rref)}$$"),
-        ("Solução", f"$$({', '.join(str(v) for v in variables)}) = {sp.latex(sol)}$$"),
+        ("System of equations", f"$$ \\begin{{cases}} {sp.latex(parse_expr(eq1_str.split('=')[0]))} = {sp.latex(parse_expr(eq1_str.split('=')[1]))} \\\\ {sp.latex(parse_expr(eq2_str.split('=')[0]))} = {sp.latex(parse_expr(eq2_str.split('=')[1]))} \\end{{cases}} $$"),
+        ("Solving for x and y", "Applying substitution or elimination method."),
     ]
-    if isinstance(sol, sp.FiniteSet) and sol:
-        vals = list(sol)[0]
-        verify = []
-        for e in eqs:
-            sub = sp.simplify(e.subs(dict(zip(syms, vals))))
-            verify.append(f"{sp.latex(e)} → {sp.latex(sub)} = 0" + (" ✓" if sub == 0 else ""))
-        steps.append(("Verificação", "  ".join(verify)))
-    final = "(" + ", ".join(str(v) for v in variables) + ") = " + sp.latex(sol)
+    
+    if isinstance(sol, dict):
+        final = f"x = {sp.latex(sol.get(X, 'Any'))}, \\quad y = {sp.latex(sol.get(Y, 'Any'))}"
+        steps.append(("Result", f"$${final}$$"))
+    else:
+        final = "No unique solution or infinitely many solutions."
+        steps.append(("Result", final))
+        
     return steps, final, None
 
-
-def render_system():
-    st.subheader("Sistemas lineares")
-    size = st.radio("Tamanho", ['2x2', '3x3'], horizontal=True, key="sys_size")
-    variables = ['x', 'y'] if size == '2x2' else ['x', 'y', 'z']
-    eq1 = st.text_input("Equação 1", value="2*x + 3*y = 5", key="sys_e1")
-    eq2 = st.text_input("Equação 2", value="x - y = 1", key="sys_e2")
-    eq3 = None
-    if size == '3x3':
-        eq3 = st.text_input("Equação 3", value="x + y + z = 6", key="sys_e3")
-    if st.button("Mostrar exemplo", key="sys_ex"):
-        st.session_state.sys_size = '2x2'
-        st.session_state.sys_e1, st.session_state.sys_e2 = "2*x + 3*y = 5", "x - y = 1"
+def render_linear_systems():
+    st.title("Linear Systems (2x2)")
+    
+    with st.container(border=True):
+        eq1 = st.text_input("Equation 1", value="2*x + y = 5", key="sys_eq1")
+        eq2 = st.text_input("Equation 2", value="x - y = 1", key="sys_eq2")
+        col1, col2 = st.columns([1, 4])
+        submit = col1.button("Solve", use_container_width=True)
+        example = col2.button("Show example", icon="✨")
+        
+    if example:
+        st.session_state.sys_eq1 = "2*x + y = 5"
+        st.session_state.sys_eq2 = "x - y = 1"
         st.rerun()
-    equations = [eq1, eq2] + ([eq3] if size == '3x3' and eq3 else [])
     try:
-        steps, final, plot = solve_system(equations, variables)
+        steps, final, plot = solve_linear_system(eq1, eq2)
         _show(steps, final, plot)
     except Exception as ex:
         st.error(str(ex))
 
 
 # =============================================================================
-#  APP PRINCIPAL
+#  MAIN APP ROUTING
 # =============================================================================
-st.set_page_config(page_title="CalculusFlow", page_icon="➗", layout="centered")
+def main():
+    st.set_page_config(page_title="Advanced Math Solver", layout="wide")
+    
+    st.sidebar.title("Advanced Math Solver")
+    st.sidebar.markdown("---")
 
-st.title("CalculusFlow")
-st.caption("Companheiro interativo de matemática — aritmética, cálculo e álgebra, passo a passo.")
+    menu = {
+        "⌂ Home": "home",
+        "+ Addition (carrying)": "addition",
+        "− Subtraction (borrowing)": "subtraction",
+        "× Multiplication": "multiplication",
+        "÷ Long Division (L)": "long_division",
+        "∞ Limits": "limits",
+        "f' Derivative (limit def.)": "derivative_limit",
+        "Σ Integral (Riemann)": "integral_limit",
+        "x= Linear Equation": "linear_equation",
+        "x² Quadratic Equation": "quadratic_equation",
+        "⊞ Linear Systems": "linear_systems",
+        "dy Derivatives (rules)": "derivatives",
+        "∫ Integrals (rules)": "integrals"
+    }
 
-MODULES = {
-    "Aritmética": {
-        "Adição (vai-um)": render_addition,
-        "Subtração (empréstimo)": render_subtraction,
-        "Multiplicação longa": render_multiplication,
-        "Divisão longa": render_long_division,
-    },
-    "Cálculo": {
-        "Limites": render_limit,
-        "Derivada por definição": render_derivative_limit,
-        "Integral por somas de Riemann": render_integral_limit,
-        "Derivadas (regras)": render_derivative,
-        "Integrais (regras)": render_integral,
-    },
-    "Álgebra": {
-        "Equação linear": render_linear,
-        "Equação quadrática": render_quadratic,
-        "Sistemas lineares": render_system,
-    },
-}
+    choice = st.sidebar.radio("Navigation", list(menu.keys()))
 
-group = st.sidebar.radio("Área", list(MODULES.keys()))
-modules = MODULES[group]
-choice = st.sidebar.radio("Módulo", list(modules.keys()))
-st.sidebar.markdown("---")
-st.sidebar.markdown("Cálculo simbólico com **SymPy** — sem chave de API.")
-modules[choice]()
+    if menu[choice] == "home":
+        st.title("Advanced Math Solver")
+        st.markdown("Welcome! Select an operation from the sidebar to view step-by-step mathematical solutions with proper formatting and charts.")
+    elif menu[choice] == "addition":
+        render_addition()
+    elif menu[choice] == "subtraction":
+        render_subtraction()
+    elif menu[choice] == "multiplication":
+        render_multiplication()
+    elif menu[choice] == "long_division":
+        render_long_division()
+    elif menu[choice] == "limits":
+        render_limit()
+    elif menu[choice] == "derivative_limit":
+        render_derivative_limit()
+    elif menu[choice] == "integral_limit":
+        render_integral_limit()
+    elif menu[choice] == "linear_equation":
+        render_linear()
+    elif menu[choice] == "quadratic_equation":
+        render_quadratic()
+    elif menu[choice] == "linear_systems":
+        render_linear_systems()
+    elif menu[choice] == "derivatives":
+        render_derivative()
+    elif menu[choice] == "integrals":
+        render_integral()
+
+if __name__ == '__main__':
+    main()
