@@ -1,23 +1,21 @@
 """Módulos de cálculo: limites, derivada por definição, integral por Riemann, derivadas e integrais."""
+import sys
+from pathlib import Path
+
+# --- FIX DEFINITIVO: sem import relativo ---
+# Adiciona a pasta calculusflow ao path para que "from core import" funcione
+_HERE = Path(__file__).parent.resolve()
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
+if str(_HERE.parent) not in sys.path:
+    sys.path.insert(0, str(_HERE.parent))
+
 import streamlit as st
 import sympy as sp
 
-# --- FIX PARA STREAMLIT CLOUD: imports robustos ---
-try:
-    from core import parse_expr, get_var, X, for_plot, num
-except ModuleNotFoundError:
-    try:
-        from calculusflow.core import parse_expr, get_var, X, for_plot, num
-    except ModuleNotFoundError:
-        from .core import parse_expr, get_var, X, for_plot, num
-
-try:
-    import plot_util
-except ModuleNotFoundError:
-    try:
-        from calculusflow import plot_util
-    except ModuleNotFoundError:
-        from . import plot_util
+# Imports absolutos apenas - nunca usar from .core
+from core import parse_expr, get_var, X, for_plot, num
+import plot_util
 
 
 def _show(steps, final, plot=None):
@@ -42,7 +40,6 @@ def solve_limit(expr_str, point):
     if sub == sp.zoo or sub.has(sp.nan) or (getattr(sub, 'is_infinite', None) and sub.is_infinite):
         steps.append(("Forma indeterminada", "A substituição direta dá uma forma infinita/indeterminada; é preciso simplificar algebricamente."))
     steps.append(("Cálculo do limite", f"$$\\lim_{{x \\to {sp.latex(p)}}} {sp.latex(f)} = {sp.latex(lim)}$$"))
-    # verificação numérica
     try:
         near = [f.subs(x, p + sp.Rational(1, 10**k)) for k in range(1, 4)]
         steps.append(("Verificação numérica", "Valores próximos: " + ", ".join(f"{sp.latex(p + sp.Rational(1,10**k))} → {sp.latex(sp.N(v,5))}" for k, v in enumerate(near, 1))))
@@ -118,7 +115,6 @@ def solve_integral_limit(expr_str, a, b, n, var_name='x'):
     f = parse_expr(expr_str, var_name)
     a, b, n = float(a), float(b), int(n)
     dx = (b - a) / n
-    # soma de Riemann (retângulos à direita) numérica
     riemann = sum(float(f.subs(x, a + i * dx)) * dx for i in range(1, n + 1))
     exact = sp.integrate(f, (x, a, b))
     steps = [
