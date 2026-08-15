@@ -1,22 +1,21 @@
-"""CalculusFlow — versão Streamlit. Corrigido para Streamlit Cloud."""
+"""CalculusFlow — versão Streamlit. FIX FINAL para Streamlit Cloud."""
 import sys
 from pathlib import Path
 
-# Garante que a pasta do app.py esteja no sys.path (essencial no Streamlit Cloud)
-ROOT = Path(__file__).parent
-sys.path.insert(0, str(ROOT))
-# Também garante que a raiz do repo esteja no path caso o app esteja em subpasta
-sys.path.insert(0, str(ROOT.parent))
+# --- BOOTSTRAP DE PATH: Isso tem que vir ANTES de importar calculus ---
+HERE = Path(__file__).parent.resolve()
+ROOT = HERE.parent.resolve()
+# Adiciona a própria pasta (calculusflow) e a raiz do repo
+for p in [str(HERE), str(ROOT)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
 import streamlit as st
 
-# Imports robustos - funcionam se os módulos estão na mesma pasta ou como pacote
-try:
-    import arithmetic
-    import calculus
-    import algebra
-except ModuleNotFoundError:
-    from calculusflow import arithmetic, calculus, algebra
+# Agora importa absoluto - vai funcionar porque HERE está no path
+import arithmetic
+import calculus
+import algebra
 
 st.set_page_config(page_title="CalculusFlow", page_icon="➗", layout="centered")
 
