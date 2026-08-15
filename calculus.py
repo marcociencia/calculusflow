@@ -1,8 +1,23 @@
 """Módulos de cálculo: limites, derivada por definição, integral por Riemann, derivadas e integrais."""
 import streamlit as st
 import sympy as sp
-from core import parse_expr, get_var, X, for_plot, num
-import plot_util
+
+# --- FIX PARA STREAMLIT CLOUD: imports robustos ---
+try:
+    from core import parse_expr, get_var, X, for_plot, num
+except ModuleNotFoundError:
+    try:
+        from calculusflow.core import parse_expr, get_var, X, for_plot, num
+    except ModuleNotFoundError:
+        from .core import parse_expr, get_var, X, for_plot, num
+
+try:
+    import plot_util
+except ModuleNotFoundError:
+    try:
+        from calculusflow import plot_util
+    except ModuleNotFoundError:
+        from . import plot_util
 
 
 def _show(steps, final, plot=None):
