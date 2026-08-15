@@ -1,39 +1,31 @@
-# CalculusFlow — versão Streamlit
+# ∫➗ CalculusFlow – Interactive Step-by-Step Math Solver
 
-Aplicativo de matemática passo a passo (aritmética, cálculo e álgebra) reescrito em **Python + Streamlit + SymPy** para rodar no [Streamlit Community Cloud](https://streamlit.io/cloud) de graça.
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io)
 
-## Por que SymPy (e não LLM)
-A versão original usa um backend de LLM para gerar os passos. Esta versão usa **SymPy** (cálculo simbólico real): mais confiável, sem chave de API e 100% gratuito para rodar no Streamlit Cloud.
+Interactive companion for arithmetic, calculus and algebra.  
+Every problem is solved with clear step-by-step explanations and live plots — powered by SymPy, completely free, no API key needed.
 
-## Estrutura
-```
-requirements.txt            # dependências (raiz — o Streamlit Cloud procura aqui)
-streamlit_app/
-  app.py                    # aplicativo principal (menu lateral)
-  core.py                   # parsing de expressões + helpers
-  plot_util.py              # gráficos com matplotlib
-  arithmetic.py             # adição, subtração, multiplicação, divisão
-  calculus.py               # limites, derivadas, integrais
-  algebra.py                # equações linear/quadrática, sistemas
-```
+## 🚀 Features
 
-## Rodar localmente
+- ✅ **Arithmetic** – Addition with carry, subtraction with borrowing, long multiplication & long division (visual “armada” style)
+- 📐 **Calculus** – Limits, derivatives (definition + rules), integrals (Riemann sums + rules), definite & indefinite
+- 🧮 **Algebra** – Linear equations, quadratic equations (Bhaskara), 2×2 and 3×3 linear systems
+- 📊 **Live plots** – Matplotlib visualizations for functions, tangents, shaded areas and roots
+- 📝 **Step-by-step solutions** – Clear mathematical reasoning in LaTeX
+- 🚀 **One-click deploy** – Ready for Streamlit Community Cloud
+- 🔒 **100% offline** – No external APIs or keys required
+
+## 🛠️ Tech Stack
+
+- **Python 3.8+**
+- **Streamlit ≥ 1.30**
+- **SymPy ≥ 1.12** (symbolic mathematics)
+- **Matplotlib ≥ 3.7** + **NumPy ≥ 1.24**
+
+## 🚀 Quick Start
+
 ```bash
+git clone https://github.com/YOUR_USERNAME/CalculusFlow.git
+cd CalculusFlow
 pip install -r requirements.txt
-streamlit run streamlit_app/app.py
-```
-
-## Publicar no Streamlit Community Cloud
-1. Crie um repositório no GitHub e suba estes arquivos (a pasta `streamlit_app/` e o `requirements.txt` na raiz).
-2. Acesse https://streamlit.io/cloud e entre com o GitHub.
-3. **New app** → selecione o repositório.
-4. **Main file path**: `streamlit_app/app.py`
-5. O `requirements.txt` na raiz é instalado automaticamente.
-6. Clique em **Deploy**.
-
-## Módulos incluídos
-- **Aritmética**: adição com transporte, subtração com empréstimo, multiplicação longa, divisão longa (com botão "Mostrar exemplo").
-- **Cálculo**: limites, derivada por definição (limite do quociente), integral como limite de somas de Riemann, derivadas e integrais por regras.
-- **Álgebra**: equação linear, equação quadrática (Bhaskara), sistemas lineares 2×2 e 3×3 (matriz + RREF).
-
-> Observação: esta é uma versão independente do app original em React/Base44. Os passos são gerados matematicamente pelo SymPy (não por IA).
+streamlit run app.py
