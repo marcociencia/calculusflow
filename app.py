@@ -79,6 +79,10 @@ def num(v):
 
 
 def plot_functions(exprs, x_min, x_max, points=None, shade=None, title=None):
+    if not HAS_MPL:
+        st.info(" matplotlib não está instalado no ambiente — o gráfico foi oculto. "
+                "Adicione `matplotlib>=3.7` ao requirements.txt para habilitá-lo.")
+        return None
     fig, ax = plt.subplots(figsize=(6.5, 4.2))
     xs = np.linspace(float(x_min), float(x_max), 400)
     for e in exprs:
@@ -122,7 +126,9 @@ def _show(steps, final, plot=None):
     else:
         st.latex(final)
     if plot:
-        st.pyplot(plot_functions(**plot))
+        fig = plot_functions(**plot)
+        if fig is not None:
+            st.pyplot(fig)
 
 
 # =============================================================================
