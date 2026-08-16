@@ -24,9 +24,18 @@ and lists matplotlib. Then reboot the app on Streamlit Cloud.
 
 import streamlit as st
 import numpy as np
-import matplotlib.pyplot as plt
 import sympy as sp
 from sympy import lambdify
+
+# matplotlib é opcional — o app funciona sem os gráficos
+try:
+    import matplotlib
+    matplotlib.use("Agg")  # backend sem interface gráfica (essencial no Streamlit Cloud)
+    import matplotlib.pyplot as plt
+    HAS_MPL = True
+except Exception:
+    HAS_MPL = False
+    plt = None
 
 
 # =============================================================================
