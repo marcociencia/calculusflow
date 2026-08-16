@@ -1,6 +1,6 @@
 # ∫➗ CalculusFlow – Interactive Step-by-Step Math Solver
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)]([https://share.streamlit.io](https://calculusflow-3dzko2iubcrvbefm68j6nc.streamlit.app/)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)]([https://share.streamlit.io](https://calculusflow-3dzko2iubcrvbefm68j6nc.streamlit.app/])
 
 Interactive companion for arithmetic, calculus and algebra.  
 Every problem is solved with clear step-by-step explanations and live plots — powered by SymPy, completely free, no API key needed.
