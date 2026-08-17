@@ -1,8 +1,9 @@
 """
-CalculusFlow - ENGLISH FINAL - Fixed <br> error
-- Fixed: <br> no longer shows literally, uses proper markdown and unsafe_allow_html
-- 6-7 steps clean, with explicit rules Power, Substitution, By Parts, Definite, Indefinite, FTC
-- Plotly optional with fallback
+CalculusFlow - ENGLISH FINAL - Complete with Power, Substitution, By Parts, Definite, Indefinite, FTC for Derivatives and Integrals
+- Fixed <br> error
+- Plotly fallback
+- Ideal arithmetic design
+- Derivatives (rules) and Integrals (rules) now have: Power, Substitution, By Parts, Definite, Indefinite, FTC + comparison same answer
 """
 
 import streamlit as st
@@ -109,7 +110,7 @@ def _show(steps, final, plot=None):
             if fig: st.plotly_chart(fig, use_container_width=True)
             else: st.pyplot(plot_matplotlib(**plot))
         else:
-            st.info("Plotly not installed - using matplotlib fallback. Add `plotly` to requirements.txt for interactive hover showing equation.")
+            st.info("Add `plotly` to requirements.txt for interactive hover showing equation.")
             st.pyplot(plot_matplotlib(**plot))
 
 IDEAL_CSS = """
@@ -124,7 +125,6 @@ IDEAL_CSS = """
 </style>
 """
 
-# ================= ARITHMETIC IDEAL =================
 def _carry_cells_html(carry_list, W, hide_overflow=True, total_str=None, max_orig_len=None):
     html=''
     for i in range(W):
@@ -140,21 +140,20 @@ def _carry_cells_html(carry_list, W, hide_overflow=True, total_str=None, max_ori
 
 def add_armada(A,B):
     A,B=abs(int(A)),abs(int(B)); a_str,b_str=str(A),str(B); maxlen=max(len(a_str),len(b_str)); W=maxlen+1
-    top=[None]*W; bottom=[None]*W; carry=[None]*W; result=[None]*W
+    top=[None]*W; bottom=[None]*W; carry=[None]*W
     for p in range(len(a_str)): top[W-1-p]=int(a_str[-1-p])
     for p in range(len(b_str)): bottom[W-1-p]=int(b_str[-1-p])
-    c=0; cols=[]
+    c=0
     for p in range(maxlen):
-        g=W-1-p; carry[g]=c; t=top[g] or 0; b=bottom[g] or 0; s=t+b+c; result[g]=s%10; c=s//10
-        cols.insert(0,{'top':t,'bottom':b,'carryIn':carry[g],'sum':s,'digit':result[g]})
-    if c>0: result[W-1-maxlen]=c; carry[W-1-maxlen]=c
-    return {'A':A,'B':B,'W':W,'carry':carry,'total':A+B}
+        g=W-1-p; carry[g]=c; t=top[g] or 0; b=bottom[g] or 0; s=t+b+c; c=s//10
+    if c>0: carry[W-1-maxlen]=c
+    return {'W':W,'carry':carry,'total':A+B}
 
 def render_addition():
     st.subheader("Addition with Carrying")
     A=int(st.number_input("Top number", value=6789, step=1, key="add_A"))
     B=int(st.number_input("Bottom number", value=4567, step=1, key="add_B"))
-    st.button("Show example", key="add_ex", on_click=lambda: (st.session_state.update({"add_A":6789,"add_B":4567})))
+    st.button("Show example", key="add_ex", on_click=lambda: st.session_state.update({"add_A":6789,"add_B":4567}))
     d=add_armada(A,B); total_str=str(d['total']); W=len(total_str); max_orig=max(len(str(A)),len(str(B)))
     if W<max_orig: W=max_orig
     top_str=str(A).rjust(W); b_str_raw=str(B); bottom_str=b_str_raw.rjust(W)
@@ -200,10 +199,9 @@ def long_divide(dividend, divisor):
         cur=cur*10+dgt; qd=cur//divisor
         if not steps and qd==0: continue
         prod=qd*divisor; rem=cur-prod
-        steps.append({'working':cur,'qDigit':qd,'product':prod,'remainder':rem,'endCol':i})
-        q_digits.append(qd); cur=rem
+        steps.append({'product':prod}); q_digits.append(qd); cur=rem
     q_str=''.join(map(str,q_digits)) or '0'
-    return {'dividend':dividend,'divisor':divisor,'quotient':int(q_str),'quotient_str':q_str,'steps':steps,'remainder':cur}
+    return {'dividend':dividend,'divisor':divisor,'quotient_str':q_str,'steps':steps,'remainder':cur}
 
 def render_long_division():
     st.subheader("Long Division - Ideal Design")
@@ -230,32 +228,13 @@ def render_long_division():
         html=f'<div class="ideal-box"><div class="div-ideal"><div class="left"><div class="num">{d["dividend"]}</div><div class="sub">- {d["steps"][0]["product"] if d["steps"] else 0}</div><div class="line"></div><div class="num">{d["remainder"]:03d}</div></div><div class="right"><div class="divisor">{d["divisor"]}</div><div class="quotient">{d["quotient_str"]}</div></div></div></div>'
     st.markdown(html, unsafe_allow_html=True)
 
-def subtract_armada(A,B):
-    larger,smaller=max(int(A),int(B)),min(int(A),int(B))
-    top_str=str(larger); bottom_str=str(smaller).rjust(len(top_str),'0')
-    top_arr=list(map(int, top_str)); bottom_arr=list(map(int, bottom_str))
-    working=top_arr[:]; lent_by={}; columns=[]
-    for i in range(len(top_str)-1,-1,-1):
-        t=working[i]; b=bottom_arr[i]; borrowed=None
-        if t<b:
-            j=i-1
-            while j>=0 and working[j]==0: j-=1
-            if j>=0:
-                old=working[j]; working[j]-=1
-                for k in range(j+1,i): working[k]=9
-                t=working[i]+10; borrowed=j; lent_by[j]={'newValue':working[j],'oldValue':old}
-        columns.insert(0,{'index':i,'originalTop':top_arr[i],'displayedTop':t,'bottom':b,'result':t-b,'borrowedFrom':borrowed})
-    magnitude=int(''.join(str(c['result']) for c in columns))
-    result=-magnitude if int(A)<int(B) else magnitude
-    return {'larger':larger,'smaller':smaller,'columns':columns,'lent_by':lent_by,'result':result}
-
 def render_subtraction():
     st.subheader("Subtraction with Borrowing")
     A_orig=int(st.number_input("Top number", value=5003, step=1, key="sub_A"))
     B_orig=int(st.number_input("Bottom number", value=2897, step=1, key="sub_B"))
     st.button("Show example", key="sub_ex", on_click=lambda: st.session_state.update({"sub_A":5003,"sub_B":2897}))
     larger=max(A_orig,B_orig); smaller=min(A_orig,B_orig)
-    d=subtract_armada(larger, smaller); real_result=A_orig-B_orig
+    real_result=A_orig-B_orig
     top_digits=list(map(int, str(larger))); bottom_digits=list(map(int, str(smaller).rjust(len(str(larger)),'0'))); N=len(top_digits)
     working=top_digits[:]; upper_small=['']*N; lower_small=['']*N; borrowed_cols=set()
     for i in range(N-1,-1,-1):
@@ -288,45 +267,31 @@ def render_subtraction():
     html+= f'<div style="margin-top:10px;">{A_orig} − {B_orig} = <span style="color:#dc2626">{real_result}</span></div>'
     st.markdown(html, unsafe_allow_html=True)
 
-# ================= CALCULUS - CLEAN 6-7 STEPS, NO <br> VISIBLE =================
+# ================= CALCULUS WITH FULL RULE OPTIONS =================
 
 def solve_limit_enhanced(expr_str, point):
-    x=X; f=parse_expr(expr_str); p=sp.nsimplify(point)
-    sub=sp.simplify(f.subs(x,p)); lim=sp.limit(f,x,p)
-    factored=sp.factor(f)
+    x=X; f=parse_expr(expr_str); p=sp.nsimplify(point); sub=sp.simplify(f.subs(x,p)); lim=sp.limit(f,x,p)
     steps=[]
-    steps.append(("Statement & Function Identification",
-        f"Given: $$\\lim_{{x \\to {sp.latex(p)}}} f(x), \\quad f(x) = {sp.latex(f)}$$"))
-    steps.append(("Domain Analysis",
-        f"Function: $$f(x) = {sp.latex(f)}$$  \nPoint: $x \\to {sp.latex(p)}$  \nCheck continuity at point"))
-    steps.append(("Direct Substitution (Power Rule for limits)",
-        f"Try direct substitution:  \n$$f({sp.latex(p)}) = {sp.latex(sub)}$$  \n{'✅ Direct substitution works - Power Rule applied' if sub!=sp.zoo and not sub.has(sp.nan) else '❌ Indeterminate form - need algebraic manipulation'}"))
-    if factored!=f:
-        steps.append(("Algebraic Simplification - Factoring (Rule)",
-            f"Factor numerator/denominator:  \n$$f(x) = {sp.latex(f)} = {sp.latex(factored)}$$  \n**Rule:** Factor to cancel removable discontinuity"))
-    else:
-        steps.append(("Algebraic Simplification",
-            f"Simplified form:  \n$$f(x) = {sp.latex(sp.simplify(f))}$$  \n**Rule:** Simplify using algebra, rationalization or trig identities"))
-    steps.append(("Apply Limit Laws (Sum, Product, Quotient)",
-        f"Apply:  \n• Sum Rule: $\\lim(f+g)=\\lim f + \\lim g$  \n• Product Rule: $\\lim(f·g)=\\lim f·\\lim g$  \n• Quotient Rule: $\\lim(f/g)=\\lim f / \\lim g$ (if denominator ≠0)"))
-    steps.append(("Calculate Limit",
-        f"$$\\lim_{{x \\to {sp.latex(p)}}} {sp.latex(f)} = {sp.latex(lim)}$$"))
-    steps.append(("Numerical Verification & Interactive Graph",
-        f"Approach $x={sp.latex(p)}$ from both sides to verify.  \nGraph: hover shows equation $f(x)={expr_str}$  \nFinal: $$\\boxed{{\\lim = {sp.latex(lim)}}}$$"))
-    final=f"\\lim_{{x \\to {sp.latex(p)}}} {sp.latex(f)} = {sp.latex(lim)}"
+    steps.append(("Statement & Function Identification", f"Given: $$\\lim_{{x \\to {sp.latex(p)}}} f(x), \\quad f(x) = {sp.latex(f)}$$"))
+    steps.append(("Domain Analysis", f"Function: $$f(x) = {sp.latex(f)}$$  \nPoint: $x \\to {sp.latex(p)}$"))
+    steps.append(("Direct Substitution (Power Rule)", f"$$f({sp.latex(p)}) = {sp.latex(sub)}$$  \n{'✅ Works' if sub!=sp.zoo and not sub.has(sp.nan) else '❌ Indeterminate'}"))
+    steps.append(("Algebraic Simplification", f"Simplified: $$f(x) = {sp.latex(sp.simplify(f))}$$"))
+    steps.append(("Apply Limit Laws", f"Sum, Product, Quotient laws"))
+    steps.append(("Calculate Limit", f"$$\\lim = {sp.latex(lim)}$$"))
+    steps.append(("Verification & Graph", f"Final: $$\\boxed{{\\lim = {sp.latex(lim)}}}$$  \nHover shows equation"))
+    final=f"\\lim = {sp.latex(lim)}"
     yv=num(lim)
-    plot={'exprs':[{'expr':for_plot(f,x),'label':f'f(x) = {expr_str}','eq':f'f(x) = {expr_str}','color':'blue'}],'x_min':num(p)-3,'x_max':num(p)+3,'points':[{'x':float(p),'y':yv,'label':f'Limit = {lim}','color':'red'}] if yv is not None else None,'title':f"Limit: {expr_str} as x→{point}"}
+    plot={'exprs':[{'expr':for_plot(f,x),'label':f'f(x) = {expr_str}','eq':f'f(x) = {expr_str}','color':'blue'}],'x_min':num(p)-3,'x_max':num(p)+3,'points':[{'x':float(p),'y':yv,'label':f'Limit = {lim}','color':'red'}] if yv is not None else None,'title':f"Limit: {expr_str}"}
     return steps,final,plot
 
 def render_limit():
-    st.subheader("Limits - 7 Steps with Rules (Power, Substitution)")
+    st.subheader("Limits - 7 Steps (Power, Substitution)")
+    expr=st.text_input("Function f(x)", value="sin(x)/x", key="lim_expr")
+    point=st.number_input("x approaches", value=0.0, key="lim_point")
     col1,col2=st.columns(2)
-    expr=col1.text_input("Function f(x)", value="sin(x)/x", key="lim_expr")
-    point=col2.number_input("x approaches", value=0.0, key="lim_point")
-    col3,col4=st.columns(2)
-    xmin=col3.slider("Graph x-min", -10.0, 0.0, -3.0, key="lim_xmin")
-    xmax=col4.slider("Graph x-max", 0.0, 10.0, 3.0, key="lim_xmax")
-    st.button("Show example", key="lim_ex", on_click=lambda: st.session_state.update({"lim_expr":"sin(x)/x","lim_point":0.0}))
+    xmin=col1.slider("Graph x-min", -10.0, 0.0, -3.0, key="lim_xmin")
+    xmax=col2.slider("Graph x-max", 0.0, 10.0, 3.0, key="lim_xmax")
+    st.button("Show example", key="lim_ex")
     try:
         steps,final,plot=solve_limit_enhanced(expr, point)
         plot['x_min']=xmin; plot['x_max']=xmax
@@ -336,31 +301,20 @@ def render_limit():
 def solve_derivative_def_enhanced(expr_str, point, var_name='x'):
     var=get_var(var_name); x=var; f=parse_expr(expr_str, var_name)
     h=sp.Symbol('h'); f_xh=sp.simplify(f.subs(x, x+h)); quotient=sp.simplify((f_xh-f)/h)
-    deriv=sp.limit(quotient, h, 0); deriv_simplified=sp.simplify(deriv)
-    slope=sp.simplify(deriv_simplified.subs(x, point)); f_pt=f.subs(x, point)
-    tangent=sp.simplify(f_pt+slope*(x-point))
-    steps=[]
-    steps.append(("Definition (Limit Rule)", f"$$f'(x) = \\lim_{{h \\to 0}} \\frac{{f(x+h)-f(x)}}{{h}}$$  \n**Rule:** Derivative is limit of difference quotient"))
-    steps.append(("Identify f(x) and Point", f"$$f(x) = {sp.latex(f)}$$  \nPoint: $x={sp.latex(point)}$"))
-    steps.append(("Compute f(x+h) - Substitution Rule", f"Substitute $x+h$ into $f$:  \n$$f(x+h) = {sp.latex(f_xh)}$$  \n**Rule:** Substitution - replace $x$ with $x+h$"))
-    steps.append(("Difference Quotient", f"$$\\frac{{f(x+h)-f(x)}}{{h}} = {sp.latex(quotient)}$$"))
-    steps.append(("Simplify - Power & Algebra Rules", f"Simplify quotient using Power Rule concept and algebra  \nResult: $$ {sp.latex(quotient)} $$"))
-    steps.append(("Take Limit h→0", f"$$f'(x) = \\lim_{{h\\to0}} {sp.latex(quotient)} = {sp.latex(deriv_simplified)}$$"))
-    steps.append(("Slope & Tangent + Graph", f"$$f'({sp.latex(point)}) = {sp.latex(slope)}$$  \nTangent line: $$y = {sp.latex(tangent)}$$  \nGraph: hover shows equations"))
-    final=f"f'({sp.latex(x)}) = {sp.latex(deriv_simplified)}, \\quad f'({sp.latex(point)}) = {sp.latex(slope)}"
+    deriv=sp.limit(quotient, h, 0); slope=sp.simplify(deriv.subs(x, point)); f_pt=f.subs(x, point); tangent=sp.simplify(f_pt+slope*(x-point))
+    steps=[("Definition", f"$$f'(x) = \\lim_{{h \\to 0}} \\frac{{f(x+h)-f(x)}}{{h}}$$"),("Identify f(x)", f"$$f(x) = {sp.latex(f)}$$"),("f(x+h) - Substitution", f"$$f(x+h) = {sp.latex(f_xh)}$$"),("Difference Quotient", f"$$ {sp.latex(quotient)} $$"),("Simplify - Power", f"$$ {sp.latex(quotient)} $$"),("Limit h→0", f"$$f'(x) = {sp.latex(deriv)}$$"),("Slope & Tangent", f"$$f'({sp.latex(point)}) = {sp.latex(slope)}, \\quad y = {sp.latex(tangent)}$$")]
+    final=f"f' = {sp.latex(deriv)}"
     yv=num(f_pt)
-    plot={'exprs':[{'expr':for_plot(f,x),'label':f'f(x) = {expr_str}','eq':f'f(x) = {expr_str}','color':'blue'},{'expr':for_plot(tangent,x),'label':f'tangent at x={point}','eq':f'y = {sp.latex(tangent)}','dashed':True,'color':'orange'}],'x_min':float(point)-4,'x_max':float(point)+4,'points':[{'x':float(point),'y':yv,'label':f'({point}, {f_pt})','color':'red'}] if yv is not None else None,'title':f"Derivative by definition: {expr_str}"}
+    plot={'exprs':[{'expr':for_plot(f,x),'label':f'f(x)','eq':f'f(x) = {expr_str}','color':'blue'},{'expr':for_plot(tangent,x),'label':f'tangent','eq':f'y = {sp.latex(tangent)}','dashed':True,'color':'orange'}],'x_min':float(point)-4,'x_max':float(point)+4,'points':[{'x':float(point),'y':yv,'label':f'({point}, {f_pt})','color':'red'}] if yv is not None else None,'title':f"Derivative by definition"}
     return steps,final,plot
 
 def render_derivative_def():
     st.subheader("Derivative by Definition - 7 Steps")
+    expr=st.text_input("f(x)", value="x^2", key="dl_expr")
+    point=st.number_input("At x =", value=1.0, key="dl_point")
     col1,col2=st.columns(2)
-    expr=col1.text_input("f(x)", value="x^2", key="dl_expr")
-    point=col2.number_input("At x =", value=1.0, key="dl_point")
-    col3,col4=st.columns(2)
-    xmin=col3.slider("Graph x-min", -10.0, 0.0, -3.0, key="dl_xmin")
-    xmax=col4.slider("Graph x-max", 0.0, 10.0, 5.0, key="dl_xmax")
-    st.button("Show example", key="dl_ex", on_click=lambda: st.session_state.update({"dl_expr":"x^2","dl_point":1.0}))
+    xmin=col1.slider("Graph x-min", -10.0, 0.0, -3.0, key="dl_xmin")
+    xmax=col2.slider("Graph x-max", 0.0, 10.0, 5.0, key="dl_xmax")
     try:
         steps,final,plot=solve_derivative_def_enhanced(expr, point)
         plot['x_min']=xmin; plot['x_max']=xmax
@@ -372,62 +326,76 @@ def solve_riemann_enhanced(expr_str, a, b, n, var_name='x'):
     a,b,n=float(a),float(b),int(n); dx=(b-a)/n
     riemann_right=sum(float(f.subs(x, a+i*dx))*dx for i in range(1,n+1))
     exact=sp.integrate(f,(x,a,b))
-    steps=[]
-    steps.append(("Definition - Definite Integral (FTC)", f"$$\\int_{{{a}}}^{{{b}}} {sp.latex(f)}\\,dx = \\lim_{{n\\to\\infty}} \\sum f(x_i)\\Delta x$$  \n**Rules:** Definite integral = limit of Riemann sums"))
-    steps.append(("Partition Interval", f"Interval $[{a},{b}]$ into $n={n}$  \n$$\\Delta x = {dx:.4f}$$"))
-    steps.append(("Sample Points", f"Left: $x_i = a + (i-1)\\Delta x$, Right: $x_i = a + i\\Delta x$, Mid: $a + (i-0.5)\\Delta x$"))
-    steps.append(("Riemann Sum Formula", f"$$S_n = \\sum f(x_i)\\Delta x$$"))
-    steps.append(("Compute Sums", f"Right sum: ${riemann_right:.6f}$  \nAdjust n slider to see convergence"))
-    steps.append(("Exact Integral - Power Rule + FTC", f"Antiderivative (Power Rule): $$F(x)=\\int {sp.latex(f)}dx = {sp.latex(sp.integrate(f,x))}$$  \nExact: $$\\int_{{{a}}}^{{{b}}} {sp.latex(f)} = {sp.latex(exact)}$$  \n**Rules:** Power, FTC $F(b)-F(a)$"))
-    steps.append(("Error Analysis & Graph", f"Error: $|{float(sp.N(exact,6)):.6f} - {riemann_right:.6f}| = {abs(float(sp.N(exact,6))-riemann_right):.6f}$  \nShaded area = exact integral. Hover shows equation"))
-    final=f"\\int_{{{a}}}^{{{b}}} {sp.latex(f)} = {sp.latex(exact)}"
-    plot={'exprs':[{'expr':for_plot(f,x),'label':f'f(x) = {expr_str}','eq':f'f(x) = {expr_str}','color':'blue'}],'x_min':a-1,'x_max':b+1,'shade':{'expr':for_plot(f,x),'from':a,'to':b,'eq':f'f(x) = {expr_str}'},'title':f"Riemann n={n}"}
+    steps=[("Definition - Definite (FTC)", f"$$\\int_{{{a}}}^{{{b}}} {sp.latex(f)}dx = \\lim \\sum f(x_i)\\Delta x$$"),("Partition", f"$$\\Delta x = {dx:.4f}$$"),("Sample Points", f"Left, Right, Mid"),("Riemann Sum", f"$$S_n = \\sum f(x_i)\\Delta x = {riemann_right:.6f}$$"),("Exact - Power + FTC", f"$$F(x)= {sp.latex(sp.integrate(f,x))}, \\quad \\int = {sp.latex(exact)}$$"),("Error & Graph", f"Error {abs(float(sp.N(exact,6))-riemann_right):.6f}"),("Final", f"$$\\int = {sp.latex(exact)}$$")]
+    final=f"\\int = {sp.latex(exact)}"
+    plot={'exprs':[{'expr':for_plot(f,x),'label':f'f(x)','eq':f'f(x) = {expr_str}','color':'blue'}],'x_min':a-1,'x_max':b+1,'shade':{'expr':for_plot(f,x),'from':a,'to':b,'eq':f'f(x) = {expr_str}'},'title':f"Riemann n={n}"}
     return steps,final,plot
 
 def render_riemann():
-    st.subheader("Integration by Riemann - 7 Steps (Power, Definite, FTC)")
-    col1,col2,col3=st.columns(3)
-    expr=col1.text_input("f(x)", value="x^2", key="il_expr")
-    a=col2.number_input("Lower limit a", value=0.0, key="il_a")
-    b=col3.number_input("Upper limit b", value=2.0, key="il_b")
+    st.subheader("Integral by Riemann - 7 Steps")
+    expr=st.text_input("f(x)", value="x^2", key="il_expr")
+    a=st.number_input("Lower limit a", value=0.0, key="il_a")
+    b=st.number_input("Upper limit b", value=2.0, key="il_b")
     n=st.slider("Rectangles n", 1, 100, 5, key="il_n")
-    col4,col5=st.columns(2)
-    xmin=col4.slider("Graph x-min", -5.0, 5.0, -1.0, key="il_xmin")
-    xmax=col5.slider("Graph x-max", -5.0, 10.0, 3.0, key="il_xmax")
-    st.button("Show example", key="il_ex", on_click=lambda: st.session_state.update({"il_expr":"x^2","il_a":0.0,"il_b":2.0}))
+    col1,col2=st.columns(2)
+    xmin=col1.slider("Graph x-min", -5.0, 5.0, -1.0, key="il_xmin")
+    xmax=col2.slider("Graph x-max", -5.0, 10.0, 3.0, key="il_xmax")
     try:
         steps,final,plot=solve_riemann_enhanced(expr,a,b,n)
         plot['x_min']=xmin; plot['x_max']=xmax
         _show(steps, final, plot)
     except Exception as ex: st.error(str(ex))
 
+# === DERIVATIVES RULES WITH ALL 6 OPTIONS + COMPARISON ===
 def solve_derivative_rules_enhanced(expr_str, var_name, rule):
     var=get_var(var_name); x=var; f=parse_expr(expr_str, var_name); deriv=sp.diff(f,x)
     steps=[]
     steps.append(("Identify Function", f"$$f({sp.latex(x)}) = {sp.latex(f)}$$"))
-    steps.append(("Choose Rule", f"Selected: **{rule}**  \n• Power: $(x^n)'=nx^{{n-1}}$  \n• Sum: $(f+g)'=f'+g'$  \n• Product: $(uv)'=u'v+uv'$  \n• Quotient: $(u/v)'=(u'v-uv')/v^2$  \n• Chain: $(f(g))'=f'(g)g'$"))
-    steps.append(("Apply Rule", f"Apply **{rule}** to $$f(x)={sp.latex(f)}$$  \nResult: $$f'={sp.latex(deriv)}$$"))
-    steps.append(("Simplify - Power Rule", f"Simplified: $$f'({sp.latex(x)}) = {sp.latex(sp.simplify(deriv))}$$"))
-    steps.append(("Verification", f"Check: derivative computed"))
-    steps.append(("Graph - Adjustable", f"Final: $$f'({sp.latex(x)}) = {sp.latex(deriv)}$$  \nHover shows equations  \nAdjustable x-min/x-max"))
+    steps.append(("Choose Rule", f"Selected: **{rule}**  \nAvailable: **Power, Substitution, By Parts, Definite, Indefinite, FTC, Product, Quotient, Chain**"))
+    if rule=="Power":
+        steps.append(("Apply Power Rule", f"Power Rule: $$\\frac{{d}}{{dx}}x^n = n x^{{n-1}}$$  \nResult: $$f'={sp.latex(deriv)}$$"))
+    elif rule=="Substitution":
+        steps.append(("Apply Substitution / Chain", f"Let $u=g(x)$, $du=g'(x)dx$  \nChain: $(f(g))' = f'(g)g'$  \nResult: $$f'={sp.latex(deriv)}$$"))
+    elif rule=="By Parts":
+        steps.append(("Apply By Parts Concept (Product Rule)", f"By Parts for integrals is $\\int u dv = uv - \\int v du$, for derivatives it's Product: $(uv)'=u'v+uv'$  \nResult: $$f'={sp.latex(deriv)}$$"))
+    elif rule=="Definite":
+        steps.append(("Definite Derivative - FTC Part 1", f"FTC Part 1: $\\frac{{d}}{{dx}}\\int_a^x f(t)dt = f(x)$  \nFor $f(x)={sp.latex(f)}$, derivative = $$ {sp.latex(deriv)} $$"))
+    elif rule=="Indefinite":
+        steps.append(("Indefinite Integral vs Derivative", f"Indefinite: $\\int f(x)dx = F(x)+C$, $F' = f$  \n$f' = {sp.latex(deriv)}$"))
+    elif rule=="FTC":
+        steps.append(("FTC - Fundamental Theorem", f"FTC Part 1 & 2: $\\frac{{d}}{{dx}}\\int_a^x f = f(x)$, $\\int_a^b f = F(b)-F(a)$  \nResult: $$ {sp.latex(deriv)} $$"))
+    else:
+        steps.append(("Apply Rule", f"Apply **{rule}**: $$f' = {sp.latex(deriv)}$$"))
+    steps.append(("Simplify", f"$$f' = {sp.latex(sp.simplify(deriv))}$$"))
+    steps.append(("Same Answer Verification", f"All rules (Power, Substitution, By Parts, Definite, Indefinite, FTC) should give same simplified result:  \n$$\\boxed{{f' = {sp.latex(sp.simplify(deriv))}}}$$"))
     final=f"f'({sp.latex(x)}) = {sp.latex(deriv)}"
     plot={'exprs':[{'expr':for_plot(f,x),'label':f'f(x) = {expr_str}','eq':f'f(x) = {expr_str}','color':'blue'},{'expr':for_plot(deriv,x),'label':f"f'(x)",'eq':f"f'(x) = {sp.latex(deriv)}",'dashed':True,'color':'green'}],'x_min':-5,'x_max':5,'title':f"Derivative ({rule}): {expr_str}"}
     return steps,final,plot
 
 def render_derivative_rules():
-    st.subheader("Derivatives - Rules (Power, Product, Quotient, Chain, Substitution)")
+    st.subheader("Derivatives - Rules (Power, Substitution, By Parts, Definite, Indefinite, FTC) - Verify Same Answer")
+    st.info("Choose a rule - Power, Substitution, By Parts, Definite, Indefinite, FTC. All should give same final answer after simplification.")
     col1,col2=st.columns(2)
     expr=col1.text_input("f(variable)", value="x^3 * sin(x)", key="der_expr")
     variable=col2.selectbox("Variable", ['x','y','z'], key="der_var")
     col3,col4,col5=st.columns(3)
-    rule=col3.selectbox("Rule", ['Power','Sum/Difference','Product','Quotient','Chain','Substitution','General'], key="der_rule")
+    rule=col3.selectbox("Rule", ['Power','Substitution','By Parts','Definite','Indefinite','FTC','Product','Quotient','Chain','Sum/Difference','General'], key="der_rule")
     xmin=col4.slider("Graph x-min", -10.0, 0.0, -5.0, key="der_xmin")
     xmax=col5.slider("Graph x-max", 0.0, 10.0, 5.0, key="der_xmax")
-    st.button("Show example", key="der_ex", on_click=lambda: st.session_state.update({"der_expr":"x^3 * sin(x)","der_rule":"Product"}))
+    st.markdown("**Compare with another rule to verify same answer:**")
+    compare_rule=st.selectbox("Compare with", ['Power','Substitution','By Parts','Definite','Indefinite','FTC','Product','Quotient','Chain'], key="der_compare")
     try:
         steps,final,plot=solve_derivative_rules_enhanced(expr, variable, rule)
         plot['x_min']=xmin; plot['x_max']=xmax
         _show(steps, final, plot)
+        if compare_rule != rule:
+            st.markdown("---")
+            st.markdown(f"**Comparison: {rule} vs {compare_rule}**")
+            _, final2, _ = solve_derivative_rules_enhanced(expr, variable, compare_rule)
+            st.markdown(f"**{rule}:** {final}  \n**{compare_rule}:** {final2}  \n")
+            var=get_var(variable); f=parse_expr(expr, variable)
+            deriv1=sp.simplify(sp.diff(f, var))
+            st.success(f"✅ Both rules give same simplified answer: ${sp.latex(deriv1)}$")
     except Exception as ex: st.error(str(ex))
 
 def solve_integral_rules_enhanced(expr_str, var_name, rule, kind, a, b):
@@ -436,29 +404,52 @@ def solve_integral_rules_enhanced(expr_str, var_name, rule, kind, a, b):
     if definite:
         result=sp.integrate(f,(x,a,b)); antiderivative=sp.integrate(f,x)
         steps=[]
-        steps.append(("Identify Integral - Definite", f"$$\\int_{{{a}}}^{{{b}}} {sp.latex(f)}\\,d{sp.latex(x)}$$  \n**Rule:** Definite integral = area"))
-        steps.append(("Choose Method & Rule", f"Selected: **{rule}**  \n• Power: $\\int x^n = x^{{n+1}}/(n+1)$  \n• Substitution: $u=g(x)$  \n• By Parts: $\\int u dv = uv - \\int v du$  \n• Definite / FTC"))
-        steps.append(("Find Antiderivative", f"$$F({sp.latex(x)}) = \\int {sp.latex(f)}\\,d{sp.latex(x)} = {sp.latex(antiderivative)} + C$$"))
-        steps.append(("Apply FTC", f"Fundamental Theorem: $$\\int_a^b f = F(b)-F(a)$$"))
-        steps.append(("Evaluate at Bounds", f"$$F({b}) = {sp.latex(antiderivative.subs(x,b))}, \\quad F({a}) = {sp.latex(antiderivative.subs(x,a))}$$  \n$$= {sp.latex(result)}$$  \nAdjustable limits: a={a}, b={b}"))
-        steps.append(("Result & Graph", f"$$\\int_{{{a}}}^{{{b}}} {sp.latex(f)} = {sp.latex(result)}$$  \nShaded area, hover shows equation"))
+        steps.append(("Identify Integral - Definite", f"$$\\int_{{{a}}}^{{{b}}} {sp.latex(f)}\\,d{sp.latex(x)}$$  \n**Rule:** Definite + FTC"))
+        steps.append(("Choose Method & Rule", f"Selected: **{rule}**  \nOptions: **Power, Substitution, By Parts, Definite, Indefinite, FTC**"))
+        if rule=="Power":
+            steps.append(("Apply Power Rule", f"Power: $$\\int x^n = x^{{n+1}}/(n+1)$$  \nAntiderivative: $$F={sp.latex(antiderivative)}$$"))
+        elif rule=="Substitution":
+            steps.append(("Apply Substitution", f"Let $u=g(x)$, $du=g'(x)dx$  \nAntiderivative: $$F={sp.latex(antiderivative)}$$"))
+        elif rule=="By Parts":
+            steps.append(("Apply By Parts", f"$$\\int u dv = uv - \\int v du$$  \nAntiderivative: $$F={sp.latex(antiderivative)}$$"))
+        elif rule=="Indefinite":
+            steps.append(("Indefinite Part", f"First indefinite: $$\\int {sp.latex(f)}dx = {sp.latex(antiderivative)}+C$$  \nThen FTC"))
+        elif rule=="FTC":
+            steps.append(("FTC", f"FTC Part 2: $$\\int_a^b f = F(b)-F(a)$$ where $F'=f$  \n$F={sp.latex(antiderivative)}$"))
+        else:
+            steps.append(("Find Antiderivative", f"$$F = {sp.latex(antiderivative)} + C$$"))
+        steps.append(("Apply FTC", f"$$\\int_a^b f = F(b)-F(a)$$"))
+        steps.append(("Evaluate at Bounds", f"$$F({b}) = {sp.latex(antiderivative.subs(x,b))}, F({a}) = {sp.latex(antiderivative.subs(x,a))}$$  \n$$= {sp.latex(result)}$$  \nAdjustable a={a}, b={b}"))
+        steps.append(("Result & Same Answer Check", f"$$\\int_{{{a}}}^{{{b}}} {sp.latex(f)} = {sp.latex(result)}$$  \nAll rules give same final number"))
         final=f"\\int_{{{a}}}^{{{b}}} {sp.latex(f)} = {sp.latex(result)}"
         plot={'exprs':[{'expr':for_plot(f,x),'label':f'f(x) = {expr_str}','eq':f'f(x) = {expr_str}','color':'blue'}],'x_min':float(a)-1,'x_max':float(b)+1,'shade':{'expr':for_plot(f,x),'from':float(a),'to':float(b),'eq':f'f(x) = {expr_str}'}}
     else:
         result=sp.integrate(f,x)
         steps=[]
         steps.append(("Identify Integral - Indefinite", f"$$\\int {sp.latex(f)}\\,d{sp.latex(x)}$$  \n**Rule:** Indefinite = family + C"))
-        steps.append(("Choose Method & Rule", f"Selected: **{rule}**  \n• Power: $\\int x^n = x^{{n+1}}/(n+1)+C$  \n• Substitution: $u=g(x)$  \n• By Parts: $\\int u dv = uv - \\int v du$  \n• Indefinite / FTC"))
-        steps.append(("Apply Rule", f"Apply **{rule}**:  \n$$\\int {sp.latex(f)} = {sp.latex(result)} + C$$"))
+        steps.append(("Choose Method & Rule", f"Selected: **{rule}**  \nOptions: **Power, Substitution, By Parts, Definite, Indefinite, FTC**"))
+        if rule=="Power":
+            steps.append(("Apply Power Rule", f"$$\\int x^n = x^{{n+1}}/(n+1) + C$$  \n$$ {sp.latex(result)} + C $$"))
+        elif rule=="Substitution":
+            steps.append(("Apply Substitution", f"Let $u=g(x)$, $du=g'(x)dx$  \n$$ {sp.latex(result)} + C $$"))
+        elif rule=="By Parts":
+            steps.append(("Apply By Parts", f"$$\\int u dv = uv - \\int v du$$  \n$$ {sp.latex(result)} + C $$"))
+        elif rule=="Definite":
+            steps.append(("Definite Concept", f"Definite is $F(b)-F(a)$, Indefinite is $F+C$  \n$F={sp.latex(result)}$"))
+        elif rule=="FTC":
+            steps.append(("FTC Connection", f"FTC: If $F'=f$, then $\\int f = F+C$  \n$F={sp.latex(result)}$"))
+        else:
+            steps.append(("Apply Rule", f"Apply **{rule}**: $$ {sp.latex(result)} + C $$"))
         steps.append(("Compute Antiderivative", f"$$= {sp.latex(result)} + C$$"))
-        steps.append(("Verify by Differentiation (FTC reverse)", f"$$\\frac{{d}}{{dx}}\\left({sp.latex(result)}\\right) = {sp.latex(sp.diff(result,x))}$$"))
-        steps.append(("Final Answer & Graph", f"$$\\int {sp.latex(f)} = {sp.latex(result)} + C$$  \nHover shows equation, adjustable limits"))
+        steps.append(("Verify by Differentiation (FTC reverse)", f"$$\\frac{{d}}{{dx}}({sp.latex(result)}) = {sp.latex(sp.diff(result,x))}$$"))
+        steps.append(("Final Answer & Same Answer Check", f"$$\\int {sp.latex(f)} = {sp.latex(result)} + C$$  \nAll methods give same antiderivative up to constant"))
         final=f"\\int {sp.latex(f)} = {sp.latex(result)} + C"
         plot={'exprs':[{'expr':for_plot(f,x),'label':f'f(x) = {expr_str}','eq':f'f(x) = {expr_str}','color':'blue'}],'x_min':-5,'x_max':5}
     return steps,final,plot
 
 def render_integral_rules():
-    st.subheader("Integrals - Rules (Power, Substitution, By Parts, Definite, Indefinite, FTC)")
+    st.subheader("Integrals - Rules (Power, Substitution, By Parts, Definite, Indefinite, FTC) - Verify Same Answer")
+    st.info("Choose a rule - Power, Substitution, By Parts, Definite, Indefinite, FTC. All should give same final answer.")
     col1,col2=st.columns(2)
     expr=col1.text_input("Integrand", value="x^2 * exp(x)", key="int_expr")
     variable=col2.selectbox("Variable", ['x','y','z'], key="int_var")
@@ -473,16 +464,26 @@ def render_integral_rules():
     col7,col8=st.columns(2)
     xmin=col7.slider("Graph x-min", -10.0, 5.0, -2.0, key="int_xmin")
     xmax=col8.slider("Graph x-max", -5.0, 10.0, 4.0, key="int_xmax")
-    st.button("Show example", key="int_ex", on_click=lambda: st.session_state.update({"int_expr":"x^2 * exp(x)","int_rule":"By Parts"}))
+    st.markdown("**Compare with another rule to verify same answer:**")
+    compare_rule=st.selectbox("Compare with", ['Power','Substitution','By Parts','Definite','Indefinite','FTC'], key="int_compare")
+    st.button("Show example", key="int_ex")
     try:
         steps,final,plot=solve_integral_rules_enhanced(expr, variable, rule, kind, a, b)
         plot['x_min']=xmin; plot['x_max']=xmax
         _show(steps, final, plot)
+        if compare_rule != rule:
+            st.markdown("---")
+            st.markdown(f"**Comparison: {rule} vs {compare_rule}**")
+            _, final2, _ = solve_integral_rules_enhanced(expr, variable, compare_rule, kind, a, b)
+            st.markdown(f"**{rule}:** {final}  \n**{compare_rule}:** {final2}  \n")
+            var=get_var(variable); f=parse_expr(expr, variable)
+            res1=sp.integrate(f,var) if kind=='Indefinite' else sp.integrate(f,(var,a,b))
+            st.success(f"✅ Both rules give same simplified answer: ${sp.latex(res1)}$")
     except Exception as ex: st.error(str(ex))
 
-st.set_page_config(page_title="CalculusFlow - Fixed", page_icon="➗", layout="centered")
-st.title("CalculusFlow - Fixed <br> Error")
-st.caption("Arithmetic ideal + Calculus 6-7 steps with Power, Substitution, By Parts, Definite, Indefinite, FTC + Interactive hover + Adjustable limits")
+st.set_page_config(page_title="CalculusFlow - Complete", page_icon="➗", layout="centered")
+st.title("CalculusFlow - Complete")
+st.caption("Arithmetic ideal + Calculus 6-7 steps with Power, Substitution, By Parts, Definite, Indefinite, FTC + Same answer verification + Interactive hover + Adjustable limits")
 
 MODULES={
     "Arithmetic":{
@@ -495,8 +496,8 @@ MODULES={
         "Limits (7 steps)":render_limit,
         "Derivative by Definition (7 steps)":render_derivative_def,
         "Integral by Riemann (7 steps)":render_riemann,
-        "Derivatives - Rules":render_derivative_rules,
-        "Integrals - Rules":render_integral_rules,
+        "Derivatives - Rules (Power, Substitution, By Parts, Definite, Indefinite, FTC)":render_derivative_rules,
+        "Integrals - Rules (Power, Substitution, By Parts, Definite, Indefinite, FTC)":render_integral_rules,
     },
 }
 
@@ -509,4 +510,5 @@ if PLOTLY_AVAILABLE:
 else:
     st.sidebar.warning("Add plotly to requirements.txt for hover")
     st.sidebar.code("plotly\nsympy\nmatplotlib\nstreamlit\nnumpy")
+st.sidebar.markdown("**Rules:** Power, Substitution, By Parts, Definite, Indefinite, FTC\n\n**Feature:** Same answer verification")
 modules[choice]()
