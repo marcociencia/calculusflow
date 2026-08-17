@@ -194,24 +194,29 @@ def render_addition():
 
     carry_html = _carry_cells_html(d['carry'], W, hide_overflow=True, total_str=total_str, max_orig_len=max_orig)
 
-    html = _armada_wrapper_start(W, font_size=36)
-    html += carry_html
-    # top
+    # GRID 1 = vai-um + operação (sem linha)
+    html = f'''
+    <div style="display:inline-block; background:#ffffff; padding:14px 22px 10px 22px; border-radius:12px; border:1px solid #e5e7eb;">
+      <div style="display:grid; grid-template-columns:repeat({W}, 1.05em); justify-items:center; align-items:end; font-family: ui-monospace, monospace; font-weight:700; font-size:36px; line-height:1.05; column-gap:2px; row-gap:1px;">
+        {carry_html}
+    '''
     for ch in top_str:
         html+=f'<div>{ch if ch!=" " else ""}</div>'
-    # bottom
     for ch in bottom_cells:
         if ch=='+':
             html+=f'<div style="font-size:30px; line-height:1;">+</div>'
         else:
             html+=f'<div>{ch}</div>'
-    # linha
-    html+=f'<div style="grid-column:1 / -1; height:3px; background:#111; margin:5px 0 6px 0; border-radius:1px;"></div>'
-    # resultado vermelho
+    html+=f'</div>'
+
+    # LINHA SÓLIDA - separação operação / resultado
+    html+=f'<div style="width:100%; height:3px; background:#000000; margin:8px 0; border-radius:0; border:none;"></div>'
+
+    # GRID 2 = resultado sólido vermelho
+    html+=f'<div style="display:grid; grid-template-columns:repeat({W}, 1.05em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:36px; line-height:1.05; column-gap:2px;">'
     for ch in total_str.rjust(W):
         html+=f'<div style="color:#dc2626;">{ch if ch!=" " else ""}</div>'
-
-    html+= _armada_wrapper_end()
+    html+=f'</div></div>'
     html+= f'<div style="margin-top:10px; font-size:18px; font-weight:600;">{A} + {B} = <span style="color:#dc2626">{d["total"]}</span></div>'
 
     st.markdown(html, unsafe_allow_html=True)
@@ -283,14 +288,16 @@ def render_subtraction():
     # linha de riscado
     borrow_from_marks = set(d['lent_by'].keys())
 
-    html = _armada_wrapper_start(W, font_size=34)
+    html = f'''
+    <div style="display:inline-block; background:#ffffff; padding:14px 22px 10px 22px; border-radius:12px; border:1px solid #e5e7eb;">
+      <div style="display:grid; grid-template-columns:repeat({W}, 1.05em); justify-items:center; align-items:end; font-family: ui-monospace, monospace; font-weight:700; font-size:34px; line-height:1.05; column-gap:2px;">
+    '''
     # small row
     for i in range(W):
         ch = borrow_top_small[i]
         if ch:
             html+=f'<div style="color:#2563eb; font-size:14px; font-weight:700; height:18px; display:flex; align-items:flex-end; justify-content:center;">{ch}</div>'
         else:
-            # mostra novo valor do doador se houver
             if i in d['lent_by']:
                 html+=f'<div style="color:#2563eb; font-size:14px; font-weight:700; height:18px; display:flex; align-items:flex-end; justify-content:center;">{d["lent_by"][i]["newValue"]}</div>'
             else:
@@ -301,7 +308,6 @@ def render_subtraction():
             html+=f'<div></div>'
         else:
             if i in borrow_from_marks or any(c['index']==i and c['borrowedFrom'] is not None for c in d['columns']):
-                # riscado
                 html+=f'<div style="position:relative;">{ch}<span style="position:absolute; left:10%; top:50%; width:80%; height:2px; background:#111; transform:rotate(-18deg);"></span></div>'
             else:
                 html+=f'<div>{ch}</div>'
@@ -312,12 +318,12 @@ def render_subtraction():
             html+=f'<div style="font-size:28px;">−</div>'
         else:
             html+=f'<div>{ch if ch!=" " else ""}</div>'
-    html+=f'<div style="grid-column:1 / -1; height:3px; background:#111; margin:5px 0 6px 0;"></div>'
+    html+=f'</div><div style="width:100%; height:3px; background:#000000; margin:8px 0; border:none;"></div><div style="display:grid; grid-template-columns:repeat({W}, 1.05em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:34px; line-height:1.05;">'
     for i,ch in enumerate(result_abs):
         if d['negative'] and i==0 and ch.strip()=='':
             continue
         html+=f'<div style="color:#dc2626;">{ch if ch.strip()!="" else ""}</div>'
-    html+= _armada_wrapper_end()
+    html+= f'</div></div>'
     html+= f'<div style="margin-top:10px; font-size:18px; font-weight:600;">{d["A"]} − {d["B"]} = <span style="color:#dc2626">{d["result"]}</span></div>'
     st.markdown(html, unsafe_allow_html=True)
 
@@ -375,32 +381,25 @@ def render_multiplication():
     prod_str = str(d['product']).rjust(W)
     plus_pos = W - len(d['bottom_str']) -1
 
-    html = _armada_wrapper_start(W, font_size=32)
-    # top
+    html = f'''
+    <div style="display:inline-block; background:#fff; padding:14px 22px 10px 22px; border-radius:12px; border:1px solid #e5e7eb;">
+      <div style="display:grid; grid-template-columns:repeat({W}, 1.05em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:32px; line-height:1.05; column-gap:2px;">
+    '''
     for ch in top_str:
         html+=f'<div>{ch if ch!=" " else ""}</div>'
-    # bottom com ×
     for i,ch in enumerate(bottom_raw):
         if i==plus_pos:
             html+=f'<div style="font-size:26px;">×</div>'
         else:
             html+=f'<div>{ch if ch!=" " else ""}</div>'
-    html+=f'<div style="grid-column:1 / -1; height:2px; background:#111; margin:4px 0;"></div>'
-    # parciais
-    for p in reversed(d['partials']):  # mostra do primeiro ao ultimo? manter ordem visual
-        pass
-    for p in d['partials'][::-1]: # na verdade queremos menor shift primeiro em cima
-        # corrigir ordem: primeiro parcial (unidades) em cima
-        pass
-    # Reordena para exibição tradicional: unidades em cima, dezenas embaixo
-    # d['partials'][0] é unidades (shift 0), deve aparecer primeiro após linha
+    html+=f'</div><div style="width:100%; height:2px; background:#000; margin:6px 0; border:none;"></div><div style="display:grid; grid-template-columns:repeat({W}, 1.05em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:28px; line-height:1.05;">'
     for p in d['partials']:
         for ch in p['cells']:
-            html+=f'<div style="font-size:28px;">{ch}</div>'
-    html+=f'<div style="grid-column:1 / -1; height:3px; background:#111; margin:6px 0;"></div>'
+            html+=f'<div>{ch}</div>'
+    html+=f'</div><div style="width:100%; height:3px; background:#000; margin:8px 0; border:none;"></div><div style="display:grid; grid-template-columns:repeat({W}, 1.05em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:32px;">'
     for ch in prod_str:
         html+=f'<div style="color:#dc2626;">{ch if ch!=" " else ""}</div>'
-    html+= _armada_wrapper_end()
+    html+= f'</div></div>'
     html+= f'<div style="margin-top:10px; font-size:18px; font-weight:600;">{A} × {B} = <span style="color:#dc2626">{d["product"]}</span></div>'
     st.markdown(html, unsafe_allow_html=True)
 
