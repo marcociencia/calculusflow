@@ -64,10 +64,42 @@ def pretty_eq(s):
     return t
 
 def get_var(name): return _VAR_MAP.get(name, X)
+
+def _insert_implicit_mul(s):
+    """Insert * for implicit multiplication: 3x->3*x, 3sin->3*sin, x(->x*(, )(->)*(, etc."""
+    # Normalize spaces and handle • as * for input (user may paste display format)
+    t = str(s).strip()
+    t = t.replace('•', '*')  # allow user pasting pretty format
+    t = t.replace('^', '**')
+    # ln -> log for sympy
+    t = re.sub(r'\bln\s*\(', 'log(', t, flags=re.IGNORECASE)
+    # Handle cases like 3x, 3y, 3z
+    t = re.sub(r'(?<=\d)(?=[xyzXYZ])', '*', t)
+    # Handle number before function name: 3sin, 2cos, etc -> 3*sin
+    t = re.sub(r'(?<=\d)(?=(?:sin|cos|tan|asin|acos|atan|log|exp|sqrt|abs)\s*\()', '*', t, flags=re.IGNORECASE)
+    # Handle ) followed by ( or variable or number or function
+    t = re.sub(r'(?<=\))(?=\s*[a-zA-Z0-9\(])', '*', t)
+    # Handle variable followed by ( : x( -> x*(
+    t = re.sub(r'(?<=[xyzXYZ])(?=\s*\()', '*', t)
+    # Handle variable followed by number: x2 -> x*2 (rare)
+    # Handle )(
+    t = re.sub(r'\)\s*\(', ')*(', t)
+    # Clean double **
+    t = re.sub(r'\*{3,}', '**', t)
+    return t
+
 def parse_expr(s, var_name='x'):
     if not s or str(s).strip()=='':
         raise ValueError("Empty expression.")
-    return sp.sympify(str(s).strip().replace('^','**'), locals=_LOCALS)
+    raw = str(s).strip()
+    # Insert implicit multiplication
+    processed = _insert_implicit_mul(raw)
+    try:
+        return sp.sympify(processed, locals=_LOCALS)
+    except Exception as e:
+        # Try again with more aggressive cleaning
+        # Replace 3x with 3*x already done, try to give helpful error
+        raise ValueError(f"Could not parse '{raw}' as '{processed}'. Error: {e}")
 def parse_equation(s):
     if '=' not in str(s): raise ValueError("Equation must contain '='.")
     lhs,rhs=str(s).split('=',1)
