@@ -211,10 +211,7 @@ def render_addition():
         for c in d['carry']) + '</div>')
     rows.append('<div>' + _gap() + ''.join(_cell(c) for c in d['top']) + '</div>')
     rows.append('<div>' + _cell('+') + ''.join(_cell(c) for c in d['bottom']) + '</div>')
-    
-    # LINHA EXTENDIDA AQUI: (d['W'] + 1) garante cobertura do sinal "+"
-    rows.append(_line((d['W'] + 1) * 1.4))
-    
+    rows.append(_line(d['W'] * 1.4))
     rows.append('<div>' + _gap() + ''.join(_cell(c, 'color:#dc2626;') for c in d['result']) + '</div>')
     st.markdown(
         f'<div style="display:inline-block;padding:1rem;">{"".join(rows)}</div>'
