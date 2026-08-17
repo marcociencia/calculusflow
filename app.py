@@ -1,21 +1,6 @@
 """
-CalculusFlow — versão Streamlit (arquivo único autossuficiente)
-==============================================================
-Aplicativo de matemática passo a passo (aritmética, cálculo e álgebra).
-Cálculo simbólico com SymPy — sem chave de API, gratuito para rodar no Streamlit Cloud.
-
-Como rodar localmente:
-    pip install streamlit sympy matplotlib numpy
-    streamlit run app.py
-
-Como publicar no Streamlit Community Cloud:
-    1. Suba este arquivo (app.py) num repositório GitHub.
-    2. Crie um arquivo requirements.txt na raiz com:
-            streamlit>=1.30
-            sympy>=1.12
-            matplotlib>=3.7
-            numpy>=1.24
-    3. No https://streamlit.io/cloud -> New app -> Main file path: app.py -> Deploy.
+CalculusFlow — versão Streamlit (arquivo único autossuficiente) - CORRIGIDO
+Correção do bug StreamlitAPIException nos botões "Mostrar exemplo"
 """
 
 import streamlit as st
@@ -180,11 +165,15 @@ def add_armada(A, B):
 
 def render_addition():
     st.subheader("Adição com transporte (vai-um)")
+
+    def _reset():
+        st.session_state["add_A"] = 6789
+        st.session_state["add_B"] = 4567
+
     A = int(st.number_input("Número de cima", value=6789, step=1, key="add_A"))
     B = int(st.number_input("Número de baixo", value=4567, step=1, key="add_B"))
-    if st.button("Mostrar exemplo", key="add_ex"):
-        st.session_state.add_A, st.session_state.add_B = 6789, 4567
-        st.rerun()
+    st.button("Mostrar exemplo", key="add_ex", on_click=_reset)
+
     d = add_armada(A, B)
     rows = []
     rows.append('<div>' + _gap() + ''.join(
@@ -249,11 +238,15 @@ def subtract_armada(A, B):
 
 def render_subtraction():
     st.subheader("Subtração com empréstimo (vai-um)")
+
+    def _reset():
+        st.session_state["sub_A"] = 5003
+        st.session_state["sub_B"] = 2897
+
     A = int(st.number_input("Número de cima", value=5003, step=1, key="sub_A"))
     B = int(st.number_input("Número de baixo", value=2897, step=1, key="sub_B"))
-    if st.button("Mostrar exemplo", key="sub_ex"):
-        st.session_state.sub_A, st.session_state.sub_B = 5003, 2897
-        st.rerun()
+    st.button("Mostrar exemplo", key="sub_ex", on_click=_reset)
+
     d = subtract_armada(A, B)
     w = len(d['top_arr'])
     rows = []
@@ -338,11 +331,15 @@ def multiply_armada(A, B):
 
 def render_multiplication():
     st.subheader("Multiplicação longa (armada)")
+
+    def _reset():
+        st.session_state["mul_A"] = 234
+        st.session_state["mul_B"] = 56
+
     A = int(st.number_input("Multiplicando (cima)", value=234, step=1, key="mul_A"))
     B = int(st.number_input("Multiplicador (baixo)", value=56, step=1, key="mul_B"))
-    if st.button("Mostrar exemplo", key="mul_ex"):
-        st.session_state.mul_A, st.session_state.mul_B = 234, 56
-        st.rerun()
+    st.button("Mostrar exemplo", key="mul_ex", on_click=_reset)
+
     d = multiply_armada(A, B)
     rows = []
     rows.append('<div>' + _gap() + ''.join(_cell(c) for c in d['top_cells']) + '</div>')
@@ -410,11 +407,15 @@ def long_divide(dividend, divisor):
 
 def render_long_division():
     st.subheader("Divisão longa (notação com chaves)")
+
+    def _reset():
+        st.session_state["div_A"] = 4356
+        st.session_state["div_B"] = 12
+
     dividend = int(st.number_input("Dividendo", value=4356, step=1, key="div_A"))
     divisor = int(st.number_input("Divisor", value=12, step=1, key="div_B"))
-    if st.button("Mostrar exemplo", key="div_ex"):
-        st.session_state.div_A, st.session_state.div_B = 4356, 12
-        st.rerun()
+    st.button("Mostrar exemplo", key="div_ex", on_click=_reset)
+
     d = long_divide(dividend, divisor)
     if 'error' in d:
         st.error(d['error'])
@@ -471,11 +472,14 @@ def solve_limit(expr_str, point):
 
 def render_limit():
     st.subheader("Limites")
+
+    def _reset():
+        st.session_state["lim_expr"] = "sin(x)/x"
+        st.session_state["lim_point"] = 0.0
+
     expr = st.text_input("Função f(x)", value="sin(x)/x", key="lim_expr")
     point = st.number_input("x tende a", value=0.0, key="lim_point")
-    if st.button("Mostrar exemplo", key="lim_ex"):
-        st.session_state.lim_expr, st.session_state.lim_point = "sin(x)/x", 0.0
-        st.rerun()
+    st.button("Mostrar exemplo", key="lim_ex", on_click=_reset)
     try:
         steps, final, plot = solve_limit(expr, point)
         _show(steps, final, plot)
@@ -513,11 +517,14 @@ def solve_derivative_limit(expr_str, point, var_name='x'):
 
 def render_derivative_limit():
     st.subheader("Derivada — definição por limite")
+
+    def _reset():
+        st.session_state["dl_expr"] = "x^2"
+        st.session_state["dl_point"] = 1.0
+
     expr = st.text_input("f(x)", value="x^2", key="dl_expr")
     point = st.number_input("No ponto x =", value=1.0, key="dl_point")
-    if st.button("Mostrar exemplo", key="dl_ex"):
-        st.session_state.dl_expr, st.session_state.dl_point = "x^2", 1.0
-        st.rerun()
+    st.button("Mostrar exemplo", key="dl_ex", on_click=_reset)
     try:
         steps, final, plot = solve_derivative_limit(expr, point)
         _show(steps, final, plot)
@@ -548,13 +555,18 @@ def solve_integral_limit(expr_str, a, b, n, var_name='x'):
 
 def render_integral_limit():
     st.subheader("Integral — limite das somas de Riemann")
+
+    def _reset():
+        st.session_state["il_expr"] = "x^2"
+        st.session_state["il_a"] = 0.0
+        st.session_state["il_b"] = 2.0
+        st.session_state["il_n"] = 5
+
     expr = st.text_input("f(x)", value="x^2", key="il_expr")
     a = st.number_input("Limite inferior a", value=0.0, key="il_a")
     b = st.number_input("Limite superior b", value=2.0, key="il_b")
     n = st.number_input("Retângulos n", value=5, step=1, key="il_n")
-    if st.button("Mostrar exemplo", key="il_ex"):
-        st.session_state.il_expr, st.session_state.il_a, st.session_state.il_b, st.session_state.il_n = "x^2", 0.0, 2.0, 5
-        st.rerun()
+    st.button("Mostrar exemplo", key="il_ex", on_click=_reset)
     try:
         steps, final, plot = solve_integral_limit(expr, a, b, n)
         _show(steps, final, plot)
@@ -587,13 +599,17 @@ def solve_derivative(expr_str, var_name, rule):
 
 def render_derivative():
     st.subheader("Derivadas — regras")
+
+    def _reset():
+        st.session_state["der_expr"] = "x^3 + 2*x^2 + sin(x)"
+        st.session_state["der_var"] = "x"
+        st.session_state["der_rule"] = "Geral"
+
     expr = st.text_input("f(variável)", value="x^3 + 2*x^2 + sin(x)", key="der_expr")
     col1, col2 = st.columns(2)
     variable = col1.selectbox("Variável", ['x', 'y', 'z'], key="der_var")
     rule = col2.selectbox("Regra a demonstrar", ['Geral', 'Constante', 'Potência', 'Soma/Diferença', 'Produto', 'Quociente', 'Cadeia'], key="der_rule")
-    if st.button("Mostrar exemplo", key="der_ex"):
-        st.session_state.der_expr, st.session_state.der_var, st.session_state.der_rule = "x^3 + 2*x^2 + sin(x)", "x", "Geral"
-        st.rerun()
+    st.button("Mostrar exemplo", key="der_ex", on_click=_reset)
     try:
         steps, final, plot = solve_derivative(expr, variable, rule)
         _show(steps, final, plot)
@@ -633,6 +649,14 @@ def solve_integral(expr_str, var_name, rule, kind, a, b):
 
 def render_integral():
     st.subheader("Integrais — regras")
+
+    def _reset():
+        st.session_state["int_expr"] = "x^2 + 3*x + 2"
+        st.session_state["int_var"] = "x"
+        st.session_state["int_rule"] = "Indefinida"
+        st.session_state["int_a"] = 0.0
+        st.session_state["int_b"] = 2.0
+
     expr = st.text_input("Integrando", value="x^2 + 3*x + 2", key="int_expr")
     col1, col2 = st.columns(2)
     variable = col1.selectbox("Variável", ['x', 'y', 'z'], key="int_var")
@@ -642,9 +666,12 @@ def render_integral():
     if definite:
         a = st.number_input("Limite inferior a", value=0.0, key="int_a")
         b = st.number_input("Limite superior b", value=2.0, key="int_b")
-    if st.button("Mostrar exemplo", key="int_ex"):
-        st.session_state.int_expr, st.session_state.int_var, st.session_state.int_rule = "x^2 + 3*x + 2", "x", "Indefinida"
-        st.rerun()
+    else:
+        # manter chaves no session_state mesmo quando não mostra
+        a = st.session_state.get("int_a", 0.0)
+        b = st.session_state.get("int_b", 2.0)
+
+    st.button("Mostrar exemplo", key="int_ex", on_click=_reset)
     try:
         steps, final, plot = solve_integral(expr, variable, rule,
                                             'Definite' if definite else 'Indefinite', a, b)
@@ -689,10 +716,12 @@ def solve_linear(eq_str):
 
 def render_linear():
     st.subheader("Equação linear (1º grau)")
+
+    def _reset():
+        st.session_state["lin_eq"] = "2*x + 3 = 7"
+
     eq = st.text_input("Equação", value="2*x + 3 = 7", key="lin_eq")
-    if st.button("Mostrar exemplo", key="lin_ex"):
-        st.session_state.lin_eq = "2*x + 3 = 7"
-        st.rerun()
+    st.button("Mostrar exemplo", key="lin_ex", on_click=_reset)
     try:
         steps, final, plot = solve_linear(eq)
         _show(steps, final, plot)
@@ -736,10 +765,12 @@ def solve_quadratic(eq_str):
 
 def render_quadratic():
     st.subheader("Equação quadrática (2º grau)")
+
+    def _reset():
+        st.session_state["quad_eq"] = "x^2 - 5*x + 6 = 0"
+
     eq = st.text_input("Equação", value="x^2 - 5*x + 6 = 0", key="quad_eq")
-    if st.button("Mostrar exemplo", key="quad_ex"):
-        st.session_state.quad_eq = "x^2 - 5*x + 6 = 0"
-        st.rerun()
+    st.button("Mostrar exemplo", key="quad_ex", on_click=_reset)
     try:
         steps, final, plot = solve_quadratic(eq)
         _show(steps, final, plot)
@@ -778,6 +809,13 @@ def solve_system(equations, variables):
 
 def render_system():
     st.subheader("Sistemas lineares")
+
+    def _reset():
+        st.session_state["sys_size"] = '2x2'
+        st.session_state["sys_e1"] = "2*x + 3*y = 5"
+        st.session_state["sys_e2"] = "x - y = 1"
+        st.session_state["sys_e3"] = "x + y + z = 6"
+
     size = st.radio("Tamanho", ['2x2', '3x3'], horizontal=True, key="sys_size")
     variables = ['x', 'y'] if size == '2x2' else ['x', 'y', 'z']
     eq1 = st.text_input("Equação 1", value="2*x + 3*y = 5", key="sys_e1")
@@ -785,10 +823,9 @@ def render_system():
     eq3 = None
     if size == '3x3':
         eq3 = st.text_input("Equação 3", value="x + y + z = 6", key="sys_e3")
-    if st.button("Mostrar exemplo", key="sys_ex"):
-        st.session_state.sys_size = '2x2'
-        st.session_state.sys_e1, st.session_state.sys_e2 = "2*x + 3*y = 5", "x - y = 1"
-        st.rerun()
+
+    st.button("Mostrar exemplo", key="sys_ex", on_click=_reset)
+
     equations = [eq1, eq2] + ([eq3] if size == '3x3' and eq3 else [])
     try:
         steps, final, plot = solve_system(equations, variables)
