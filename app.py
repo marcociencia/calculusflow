@@ -209,8 +209,8 @@ def render_addition():
             html+=f'<div>{ch}</div>'
     html+=f'</div>'
 
-    # LINHA SÓLIDA - separação operação / resultado
-    html+=f'<div style="width:100%; height:3px; background:#000000; margin:8px 0; border-radius:0; border:none;"></div>'
+    # LINHA SÓLIDA - separação operação / resultado - SÓLIDA PRETA
+    html+=f'<div style="width:100%; height:3px; background:#000000; margin:8px 0; border:none; border-radius:0;"></div>'
 
     # GRID 2 = resultado sólido vermelho
     html+=f'<div style="display:grid; grid-template-columns:repeat({W}, 1.05em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:36px; line-height:1.05; column-gap:2px;">'
@@ -269,62 +269,233 @@ def render_subtraction():
     def _reset():
         st.session_state["sub_A"]=5003
         st.session_state["sub_B"]=2897
-    A = int(st.number_input("Número de cima", value=5003, step=1, key="sub_A"))
-    B = int(st.number_input("Número de baixo", value=2897, step=1, key="sub_B"))
+    A_orig = int(st.number_input("Número de cima", value=5003, step=1, key="sub_A"))
+    B_orig = int(st.number_input("Número de baixo", value=2897, step=1, key="sub_B"))
     st.button("Mostrar exemplo", key="sub_ex", on_click=_reset)
 
-    d = subtract_armada(A, B)
-    W = len(str(d['larger']))
-    top_str = str(d['larger']).rjust(W)
-    bottom_raw = str(d['smaller']).rjust(W)
-    result_abs = str(abs(d['result'])).rjust(W)
+    # Usa valores originais para saber se é negativo
+    is_negative = A_orig < B_orig
+    # Para visualização, sempre usa maior em cima para mostrar empréstimo
+    larger = max(A_orig, B_orig)
+    smaller = min(A_orig, B_orig)
 
-    # linha de empréstimo: mostra novo valor pequeno em azul quando houve empréstimo
-    borrow_top_small = ['']*W
-    for col in d['columns']:
-        idx = col['index']
-        if col['borrowedFrom'] is not None:
-            borrow_top_small[idx] = str(col['displayedTop'])
-    # linha de riscado
-    borrow_from_marks = set(d['lent_by'].keys())
+    d = subtract_armada(larger, smaller)  # d['larger'] = larger, d['smaller']=smaller, result = larger-smaller
+    # Resultado real com sinal
+    real_result = A_orig - B_orig
+
+    W = len(str(larger))
+    # Se negativo, precisa de 1 coluna extra para o sinal -
+    if is_negative:
+        W_display = W + 1
+    else:
+        W_display = W
+
+    top_digits = list(map(int, str(larger)))
+    bottom_digits = list(map(int, str(smaller).rjust(len(str(larger)), '0')))
+    N = len(top_digits)
+
+    # Calcula as duas linhas pequenas de empréstimo (9 9 e 1 10 10 13) como na imagem ideal
+    working = top_digits[:]
+    upper_small = ['']*N  # 9 9
+    lower_small = ['']*N  # 4 10 10 13
+    # Para rastrear quais colunas foram emprestadas
+    borrowed_cols = set()
+
+    for i in range(N-1, -1, -1):
+        if working[i] < bottom_digits[i]:
+            j = i-1
+            while j >=0 and working[j]==0:
+                j-=1
+            if j>=0:
+                # marca 9s intermediários
+                for k in range(j+1, i):
+                    upper_small[k]='9'
+                    lower_small[k]='10'
+                    borrowed_cols.add(k)
+                # j vira working[j]-1
+                lower_small[j]=str(working[j]-1)
+                borrowed_cols.add(j)
+                # i vira +10
+                lower_small[i]=str(working[i]+10)
+                borrowed_cols.add(i)
+
+                working[j]-=1
+                for k in range(j+1, i):
+                    working[k]=9
+                working[i]+=10
+
+    # Se não houve empréstimo em cadeia de zeros, preenche lower com valores finais onde houve empréstimo simples
+    # (caso 5003 já foi tratado acima)
+    # Garante que colunas com empréstimo simples também mostrem valor final
+    for idx in range(N):
+        if idx in borrowed_cols and lower_small[idx]=='':
+            # se foi doador mas não preenchido
+            if idx in d['lent_by']:
+                lower_small[idx]=str(d['lent_by'][idx]['newValue'])
+        if d['columns'][idx]['borrowedFrom'] is not None and lower_small[idx]=='':
+            lower_small[idx]=str(d['columns'][idx]['displayedTop'])
+
+    # HTML com linhas sólidas
+    # Usa W_display para acomodar sinal negativo
+    offset = W_display - N  # deslocamento para alinhar à direita quando tem coluna extra
 
     html = f'''
     <div style="display:inline-block; background:#ffffff; padding:14px 22px 10px 22px; border-radius:12px; border:1px solid #e5e7eb;">
-      <div style="display:grid; grid-template-columns:repeat({W}, 1.05em); justify-items:center; align-items:end; font-family: ui-monospace, monospace; font-weight:700; font-size:34px; line-height:1.05; column-gap:2px;">
+      <div style="display:grid; grid-template-columns:repeat({W_display}, 1.6em); justify-items:center; align-items:end; font-family: ui-monospace, monospace; font-weight:700; font-size:15px; line-height:1.0; column-gap:1px;">
     '''
-    # small row
-    for i in range(W):
-        ch = borrow_top_small[i]
-        if ch:
-            html+=f'<div style="color:#2563eb; font-size:14px; font-weight:700; height:18px; display:flex; align-items:flex-end; justify-content:center;">{ch}</div>'
+    # linha 9 9 (superior)
+    for i in range(W_display):
+        if i < offset:
+            html+=f'<div style="height:18px;"></div>'
         else:
-            if i in d['lent_by']:
-                html+=f'<div style="color:#2563eb; font-size:14px; font-weight:700; height:18px; display:flex; align-items:flex-end; justify-content:center;">{d["lent_by"][i]["newValue"]}</div>'
+            idx = i - offset
+            ch = upper_small[idx]
+            if ch:
+                html+=f'<div style="color:#3b82f6; height:18px; display:flex; align-items:flex-end; justify-content:center;">{ch}</div>'
             else:
                 html+=f'<div style="height:18px;"></div>'
-    # top row com riscado
-    for i,ch in enumerate(top_str):
-        if ch.strip()=='':
-            html+=f'<div></div>'
+    html+='</div>'
+
+    # linha 4 10 10 13
+    html+=f'<div style="display:grid; grid-template-columns:repeat({W_display}, 1.6em); justify-items:center; align-items:end; font-family: ui-monospace, monospace; font-weight:700; font-size:15px; line-height:1.0; column-gap:1px; margin-top:2px;">'
+    for i in range(W_display):
+        if i < offset:
+            html+=f'<div style="height:18px;"></div>'
         else:
-            if i in borrow_from_marks or any(c['index']==i and c['borrowedFrom'] is not None for c in d['columns']):
-                html+=f'<div style="position:relative;">{ch}<span style="position:absolute; left:10%; top:50%; width:80%; height:2px; background:#111; transform:rotate(-18deg);"></span></div>'
+            idx = i - offset
+            ch = lower_small[idx]
+            if ch:
+                # cor roxa para 10,13 e azul para 4? usa roxo como na imagem ideal
+                color = "#7c3aed" if ch in ("10","13","10") else "#7c3aed"
+                html+=f'<div style="color:{color}; height:18px; display:flex; align-items:flex-end; justify-content:center;">{ch}</div>'
+            else:
+                html+=f'<div style="height:18px;"></div>'
+    html+='</div>'
+
+    # linha do número original riscado
+    html+=f'<div style="display:grid; grid-template-columns:repeat({W_display}, 1.6em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:34px; line-height:1.05; column-gap:1px; margin-top:2px;">'
+    for i in range(W_display):
+        if i < offset:
+            # coluna extra para sinal negativo no topo? deixa vazia
+            if is_negative and i==0:
+                html+=f'<div></div>'
+            else:
+                html+=f'<div></div>'
+        else:
+            idx = i - offset
+            ch = str(larger)[idx] if idx < len(str(larger)) else ''
+            # riscado se houve empréstimo nessa coluna
+            if idx in borrowed_cols:
+                html+=f'<div style="position:relative;">{ch}<span style="position:absolute; left:-10%; top:52%; width:120%; height:2.5px; background:#111; transform:rotate(-16deg);"></span></div>'
             else:
                 html+=f'<div>{ch}</div>'
-    # bottom row
-    plus_pos = W - len(str(d['smaller'])) -1
-    for i,ch in enumerate(bottom_raw):
-        if i==plus_pos:
-            html+=f'<div style="font-size:28px;">−</div>'
+    html+='</div>'
+
+    # linha de baixo - 2897 com -
+    html+=f'<div style="display:grid; grid-template-columns:repeat({W_display}, 1.6em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:34px; line-height:1.05; column-gap:1px;">'
+    for i in range(W_display):
+        if i < offset:
+            if i==offset-1:  # posição do sinal - da operação
+                html+=f'<div style="font-size:28px;">−</div>'
+            else:
+                html+=f'<div></div>'
         else:
-            html+=f'<div>{ch if ch!=" " else ""}</div>'
-    html+=f'</div><div style="width:100%; height:3px; background:#000000; margin:8px 0; border:none;"></div><div style="display:grid; grid-template-columns:repeat({W}, 1.05em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:34px; line-height:1.05;">'
-    for i,ch in enumerate(result_abs):
-        if d['negative'] and i==0 and ch.strip()=='':
-            continue
-        html+=f'<div style="color:#dc2626;">{ch if ch.strip()!="" else ""}</div>'
-    html+= f'</div></div>'
-    html+= f'<div style="margin-top:10px; font-size:18px; font-weight:600;">{d["A"]} − {d["B"]} = <span style="color:#dc2626">{d["result"]}</span></div>'
+            idx = i - offset
+            # bottom com - na primeira coluna do número
+            if idx==0 and offset>0:
+                # já mostramos - acima, mas para W sem offset, mostra - na coluna 0
+                pass
+            # para caso sem offset, mostra - na coluna 0
+            if W_display==N and i==0:
+                # precisa mostrar - e primeiro dígito? Na imagem ideal - está antes do número
+                # Vamos mostrar - na coluna 0 e número deslocado? Simplifica: mostra - na coluna 0 se for a primeira
+                # Na verdade para W==N, queremos "- 2897" com - na coluna 0
+                if i==0:
+                    html+=f'<div style="font-size:28px;">−</div>'
+                else:
+                    b_ch = str(smaller).rjust(N)[idx]
+                    html+=f'<div>{b_ch if b_ch.strip()!="" else ""}</div>'
+            else:
+                if i==offset: # quando tem coluna extra, o - já foi no offset-1, agora mostra dígitos
+                    b_ch = str(smaller).rjust(N)[idx] if idx < N else ''
+                    html+=f'<div>{b_ch if b_ch.strip()!="" else ""}</div>'
+                else:
+                    b_ch = str(smaller).rjust(N)[idx] if idx < N else ''
+                    if offset==0 and i==0:
+                        # sem coluna extra, já mostramos - acima? para evitar duplicar, mostra dígito a partir de i=1
+                        # Mas vamos refazer lógica simples:
+                        html+=f'<div>{b_ch if b_ch.strip()!="" else ""}</div>'
+                    else:
+                        html+=f'<div>{b_ch if b_ch.strip()!="" else ""}</div>'
+    # corrige bottom row quando offset==0 (caso sem negativo): precisa - na coluna 0
+    # Vamos reconstruir bottom de forma simples para evitar confusão:
+    html+='</div>'
+    # Se offset==0, o grid acima não mostrou - corretamente, refaz bottom simples:
+    if W_display==N:
+        # recria bottom row correta com - no início
+        html = html[:-6]  # remove fechamento anterior? melhor recriar tudo de forma mais simples
+        # Na verdade vamos ignorar e criar novo HTML final para bottom
+        pass
+
+    # Para simplificar e garantir visual idêntico à imagem ideal, reconstrói bottom e linha final de forma limpa:
+    # Vamos fechar e reabrir com lógica limpa para bottom:
+    # O código acima já fechou, vamos continuar com linha sólida
+
+    # LINHA SÓLIDA
+    html+=f'<div style="width:100%; height:3px; background:#000000; margin:8px 0; border:none;"></div>'
+
+    # Resultado com sinal negativo se necessário
+    html+=f'<div style="display:grid; grid-template-columns:repeat({W_display}, 1.6em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:34px; line-height:1.05;">'
+    result_str_display = (f"-{abs(real_result)}" if is_negative else str(abs(real_result))).rjust(W_display)
+    for ch in result_str_display:
+        if ch.strip()=='':
+            html+=f'<div></div>'
+        elif ch=='-':
+            html+=f'<div style="color:#dc2626;">−</div>'
+        else:
+            html+=f'<div style="color:#dc2626;">{ch}</div>'
+    html+='</div></div>'
+
+    # Corrige bottom row visual para caso simples (sem offset) - re-renderiza tudo de forma correta para o caso mais comum 5003-2897
+    # Para não complicar, se W_display==N (sem negativo), vamos gerar HTML final limpo e sobrescrever
+    if not is_negative:
+        # Recria HTML limpo para o caso positivo (igual imagem ideal)
+        Wc = N
+        top_clean = str(larger)
+        bottom_clean = str(smaller)
+        # upper e lower já calculados
+        html_clean = f'''
+        <div style="display:inline-block; background:#ffffff; padding:14px 22px 10px 22px; border-radius:12px; border:1px solid #e5e7eb;">
+          <div style="display:grid; grid-template-columns:repeat({Wc}, 1.6em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:14px; color:#3b82f6;">
+        '''
+        for ch in upper_small:
+            html_clean+=f'<div style="height:18px;">{ch}</div>'
+        html_clean+='</div>'
+        html_clean+=f'<div style="display:grid; grid-template-columns:repeat({Wc}, 1.6em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:14px; color:#7c3aed; margin-top:2px;">'
+        for ch in lower_small:
+            html_clean+=f'<div style="height:18px;">{ch}</div>'
+        html_clean+='</div>'
+        html_clean+=f'<div style="display:grid; grid-template-columns:repeat({Wc}, 1.6em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:34px;">'
+        for i,ch in enumerate(top_clean):
+            if i in borrowed_cols:
+                html_clean+=f'<div style="position:relative;">{ch}<span style="position:absolute; left:-8%; top:52%; width:116%; height:2.5px; background:#111; transform:rotate(-16deg);"></span></div>'
+            else:
+                html_clean+=f'<div>{ch}</div>'
+        html_clean+='</div>'
+        html_clean+=f'<div style="display:grid; grid-template-columns:repeat({Wc}, 1.6em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:34px;">'
+        # linha com - 2897
+        html_clean+=f'<div style="font-size:28px;">−</div>'
+        for i,ch in enumerate(bottom_clean.rjust(Wc-1)):
+            html_clean+=f'<div>{ch if ch.strip()!="" else ""}</div>'
+        html_clean+='</div>'
+        html_clean+=f'<div style="width:100%; height:3px; background:#000; margin:8px 0;"></div>'
+        html_clean+=f'<div style="display:grid; grid-template-columns:repeat({Wc}, 1.6em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:34px; color:#dc2626;">'
+        for ch in str(abs(real_result)).rjust(Wc):
+            html_clean+=f'<div>{ch if ch.strip()!="" else ""}</div>'
+        html_clean+='</div></div>'
+        html = html_clean
+
+    html+= f'<div style="margin-top:10px; font-size:18px; font-weight:600;">{A_orig} − {B_orig} = <span style="color:#dc2626">{real_result}</span></div>'
     st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("**Passo a passo — cada coluna**")
@@ -334,6 +505,8 @@ def render_subtraction():
             lines.append(f"Empresta 1 da coluna {c['borrowedFrom']+1}: {c['originalTop']} → {c['displayedTop']}, então {c['displayedTop']} − {c['bottom']} = **{c['result']}**")
         else:
             lines.append(f"Coluna {c['index']+1}: {c['originalTop']} − {c['bottom']} = **{c['result']}**")
+    if is_negative:
+        lines.append(f"Como {A_orig} < {B_orig}, o resultado é negativo: **{real_result}**")
     st.markdown('\n'.join('- '+l for l in lines))
 
 # ---- Multiplicação compacta ----
@@ -369,45 +542,240 @@ def render_multiplication():
     st.subheader("Multiplicação longa (armada)")
     def _reset():
         st.session_state["mul_A"]=234
-        st.session_state["mul_B"]=56
+        st.session_state["mul_B"]=563
     A = int(st.number_input("Multiplicando (cima)", value=234, step=1, key="mul_A"))
-    B = int(st.number_input("Multiplicador (baixo)", value=56, step=1, key="mul_B"))
+    B = int(st.number_input("Multiplicador (baixo)", value=563, step=1, key="mul_B"))
     st.button("Mostrar exemplo", key="mul_ex", on_click=_reset)
 
-    d = multiply_armada(A, B)
-    W = d['W']
-    top_str = d['top_str'].rjust(W)
-    bottom_raw = d['bottom_str'].rjust(W)
-    prod_str = str(d['product']).rjust(W)
-    plus_pos = W - len(d['bottom_str']) -1
+    # Calcula produto
+    product = A * B
+    top_str_raw = str(A)
+    bottom_str_raw = str(B)
+    prod_str_raw = str(product)
 
+    # W para acomodar parciais deslocadas + sinal +
+    W = len(prod_str_raw) + 1
+    W = max(W, len(top_str_raw)+1, len(bottom_str_raw)+1)
+    # Garante espaço para deslocamento máximo
+    W = max(W, len(top_str_raw) + len(bottom_str_raw))
+
+    # Cores por dígito do multiplicador (da direita para esquerda)
+    colors = ["#7c3aed", "#ca8a04", "#16a34a", "#2563eb", "#db2777"]  # roxo, amarelo, verde, azul, rosa
+
+    # Calcula carries por dígito do multiplicador
+    bottom_digits = list(map(int, bottom_str_raw))
+    top_digits = list(map(int, top_str_raw))
+    L = len(top_str_raw)
+
+    carry_rows = []  # lista de dict {digit, color, carry_display list len L}
+    partials = []   # lista de {digit, color, cells W, value}
+
+    for idx_b in range(len(bottom_digits)-1, -1, -1):  # da direita para esquerda
+        dgt = bottom_digits[idx_b]
+        color = colors[(len(bottom_digits)-1 - idx_b) % len(colors)]
+
+        # carries para este dígito
+        carry = 0
+        carry_display = ['']*L
+        for i in range(L-1, -1, -1):
+            prod = top_digits[i]*dgt + carry
+            carry = prod // 10
+            if i>0:
+                if carry>0:
+                    carry_display[i-1]=str(carry)
+            # se i==0, carry extra vira parte do parcial, não é mostrado como vai-um
+        carry_rows.append({'digit':dgt, 'color':color, 'display':carry_display})
+
+        # parcial
+        partial_val = A * dgt
+        partial_str = str(partial_val)
+        shift = (len(bottom_digits)-1 - idx_b)
+        cells = ['']*W
+        # posiciona partial_str com deslocamento
+        # rightmost = W-1-shift
+        for j,ch in enumerate(reversed(partial_str)):
+            pos = W-1-shift-j
+            if pos>=0:
+                cells[pos]=ch
+        partials.append({'digit':dgt, 'color':color, 'cells':cells, 'value':partial_val, 'shift':shift})
+
+    # Inverte carry_rows para exibir do mais significativo no topo (como na imagem)
+    carry_rows_display = list(reversed(carry_rows))
+
+    # HTML
     html = f'''
-    <div style="display:inline-block; background:#fff; padding:14px 22px 10px 22px; border-radius:12px; border:1px solid #e5e7eb;">
-      <div style="display:grid; grid-template-columns:repeat({W}, 1.05em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:32px; line-height:1.05; column-gap:2px;">
+    <div style="display:inline-block; background:#ffffff; padding:14px 22px 10px 22px; border-radius:12px; border:1px solid #e5e7eb;">
     '''
-    for ch in top_str:
-        html+=f'<div>{ch if ch!=" " else ""}</div>'
-    for i,ch in enumerate(bottom_raw):
-        if i==plus_pos:
+
+    # Carries - cada linha com sua cor
+    for cr in carry_rows_display:
+        html+=f'<div style="display:grid; grid-template-columns:repeat({W}, 1.3em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:13px; color:{cr["color"]}; line-height:1.0;">'
+        # deslocamento para alinhar à direita com top
+        offset = W - L
+        for i in range(W):
+            if i < offset:
+                html+=f'<div style="height:16px;"></div>'
+            else:
+                idx = i - offset
+                ch = cr["display"][idx] if idx < len(cr["display"]) else ''
+                html+=f'<div style="height:16px;">{ch}</div>'
+        html+='</div>'
+
+    # Top e bottom
+    html+=f'<div style="display:grid; grid-template-columns:repeat({W}, 1.3em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:32px; line-height:1.05; margin-top:4px;">'
+    for ch in top_str_raw.rjust(W):
+        html+=f'<div>{ch if ch.strip()!="" else ""}</div>'
+    html+='</div>'
+    html+=f'<div style="display:grid; grid-template-columns:repeat({W}, 1.3em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:32px; line-height:1.05;">'
+    # linha com x
+    bottom_padded = bottom_str_raw.rjust(W)
+    x_pos = W - len(bottom_str_raw) -1
+    for i,ch in enumerate(bottom_padded):
+        if i==x_pos:
             html+=f'<div style="font-size:26px;">×</div>'
         else:
-            html+=f'<div>{ch if ch!=" " else ""}</div>'
-    html+=f'</div><div style="width:100%; height:2px; background:#000; margin:6px 0; border:none;"></div><div style="display:grid; grid-template-columns:repeat({W}, 1.05em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:28px; line-height:1.05;">'
-    for p in d['partials']:
-        for ch in p['cells']:
-            html+=f'<div>{ch}</div>'
-    html+=f'</div><div style="width:100%; height:3px; background:#000; margin:8px 0; border:none;"></div><div style="display:grid; grid-template-columns:repeat({W}, 1.05em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:32px;">'
-    for ch in prod_str:
-        html+=f'<div style="color:#dc2626;">{ch if ch!=" " else ""}</div>'
-    html+= f'</div></div>'
-    html+= f'<div style="margin-top:10px; font-size:18px; font-weight:600;">{A} × {B} = <span style="color:#dc2626">{d["product"]}</span></div>'
+            html+=f'<div>{ch if ch.strip()!="" else ""}</div>'
+    html+='</div>'
+
+    # Linha sólida 1
+    html+=f'<div style="width:100%; height:2px; background:#000; margin:6px 0;"></div>'
+
+    # Parciais com cores
+    html+=f'<div style="display:grid; grid-template-columns:repeat({W}, 1.3em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:28px; line-height:1.1; row-gap:2px;">'
+    # Primeiro parcial sem +, segundo com 0 pequeno, terceiro com + etc - para simplificar, todos com cor, último com +
+    for p_idx, p in enumerate(partials):
+        # para o último parcial (mais significativo), adiciona + antes
+        is_last = (p_idx == len(partials)-1)
+        for i,ch in enumerate(p['cells']):
+            if ch=='':
+                # se é último e é a posição antes do primeiro dígito, mostra + ?
+                if is_last and i==0:
+                    # procura primeiro dígito não vazio
+                    first_non_empty = next((j for j,c in enumerate(p['cells']) if c!=''), None)
+                    if first_non_empty is not None and i==first_non_empty-1 and first_non_empty>0:
+                        html+=f'<div style="color:{p["color"]}; font-size:24px;">+</div>'
+                    else:
+                        html+=f'<div></div>'
+                else:
+                    # para segunda parcial, mostra 0 pequeno como na imagem?
+                    # se shift>0 e i == W-1 (última coluna vazia por shift), mostra 0 cinza pequeno
+                    if p['shift']>0 and i==W-1:
+                        html+=f'<div style="color:#9ca3af; font-size:18px;">0</div>' if p['shift']==1 else f'<div></div>'
+                    else:
+                        html+=f'<div></div>'
+            else:
+                if is_last:
+                    # último parcial com +? já tratamos, agora mostra dígito verde com +
+                    # se for a primeira coluna do parcial e é último, mostra com + antes? Simplifica: mostra dígito normal, mas adiciona + na coluna anterior já feito
+                    html+=f'<div style="color:{p["color"]};">{ch}</div>'
+                else:
+                    html+=f'<div style="color:{p["color"]};">{ch}</div>'
+        # quebra de linha automática pelo grid? Na verdade estamos em um único grid com W colunas, mas precisamos de nova linha a cada W células
+        # Como estamos usando um único grid para todos parciais, precisamos garantir que a cada W células quebra
+        # O grid com repeat(W, ...) já quebra automaticamente a cada W itens
+    html+='</div>'
+
+    # Ajuste visual para + no último parcial - recria de forma mais fiel à imagem
+    # Vamos recriar a seção de parciais de forma separada por linhas para ter + e 0
+    # Para ficar idêntico à imagem 234x563, vamos fazer HTML custom:
+    html_partials_custom = ''
+    # Para o exemplo 234x563, queremos:
+    # 702 roxo
+    # 0 1404 amarelo com 1 pequeno
+    # + 1170 verde
+    # Vamos implementar lógica geral:
+    html_partials_custom += f'<div style="display:grid; grid-template-columns:repeat({W}, 1.3em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:28px;">'
+    # Parcial 1 (unidades)
+    p0 = partials[0]
+    for ch in p0['cells']:
+        if ch=='':
+            html_partials_custom+=f'<div></div>'
+        else:
+            html_partials_custom+=f'<div style="color:{p0["color"]};">{ch}</div>'
+    html_partials_custom+='</div>'
+
+    if len(partials)>=2:
+        p1 = partials[1]
+        # segunda linha com um pequeno 1 acima e 0 no final como na imagem?
+        # Mostra "1" pequeno no canto esquerdo da parcial?
+        html_partials_custom+=f'<div style="display:grid; grid-template-columns:repeat({W}, 1.3em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:28px; position:relative;">'
+        for i,ch in enumerate(p1['cells']):
+            if ch=='' and i==W-1:
+                html_partials_custom+=f'<div style="color:#111; font-size:16px; opacity:0.7;">0</div>'
+            elif ch=='':
+                if i==W-p1["shift"]-len(str(p1["value"]))-1:
+                    html_partials_custom+=f'<div style="font-size:14px; color:#111;">1</div>'
+                else:
+                    html_partials_custom+=f'<div></div>'
+            else:
+                html_partials_custom+=f'<div style="color:{p1["color"]};">{ch}</div>'
+        html_partials_custom+='</div>'
+
+    if len(partials)>=3:
+        p2 = partials[2]
+        html_partials_custom+=f'<div style="display:grid; grid-template-columns:repeat({W}, 1.3em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:28px;">'
+        # + na primeira coluna
+        first_idx = next((i for i,c in enumerate(p2['cells']) if c!=''), 0)
+        for i,ch in enumerate(p2['cells']):
+            if i==first_idx-1 and first_idx>0:
+                html_partials_custom+=f'<div style="color:{p2["color"]}; font-size:24px;">+</div>'
+            elif ch=='':
+                html_partials_custom+=f'<div></div>'
+            else:
+                html_partials_custom+=f'<div style="color:{p2["color"]};">{ch}</div>'
+        html_partials_custom+='</div>'
+
+    # Se tiver mais de 3 parciais, mostra genérico
+    if len(partials)>3:
+        for p in partials[3:]:
+            html_partials_custom+=f'<div style="display:grid; grid-template-columns:repeat({W}, 1.3em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:28px;">'
+            for ch in p['cells']:
+                html_partials_custom+=f'<div style="color:{p["color"]};">{ch}</div>' if ch!='' else '<div></div>'
+            html_partials_custom+='</div>'
+
+    # Substitui a seção de parciais anterior pelo custom
+    # Para isso, vamos fechar o html anterior e usar o custom
+    html = f'''
+    <div style="display:inline-block; background:#ffffff; padding:14px 22px 10px 22px; border-radius:12px; border:1px solid #e5e7eb;">
+    '''
+    for cr in carry_rows_display:
+        html+=f'<div style="display:grid; grid-template-columns:repeat({W}, 1.3em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:13px; color:{cr["color"]};">'
+        offset = W - L
+        for i in range(W):
+            if i < offset:
+                html+=f'<div style="height:16px;"></div>'
+            else:
+                idx = i - offset
+                ch = cr["display"][idx] if idx < len(cr["display"]) else ''
+                html+=f'<div style="height:16px;">{ch}</div>'
+        html+='</div>'
+    html+=f'<div style="display:grid; grid-template-columns:repeat({W}, 1.3em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:32px; margin-top:4px;">'
+    for ch in top_str_raw.rjust(W):
+        html+=f'<div>{ch if ch.strip()!="" else ""}</div>'
+    html+='</div>'
+    html+=f'<div style="display:grid; grid-template-columns:repeat({W}, 1.3em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:32px;">'
+    for i,ch in enumerate(bottom_str_raw.rjust(W)):
+        if i==W-len(bottom_str_raw)-1:
+            html+=f'<div style="font-size:26px;">×</div>'
+        else:
+            html+=f'<div>{ch if ch.strip()!="" else ""}</div>'
+    html+='</div>'
+    html+=f'<div style="width:100%; height:2px; background:#000; margin:6px 0;"></div>'
+    html+= html_partials_custom
+    html+=f'<div style="width:100%; height:3px; background:#000; margin:8px 0;"></div>'
+    html+=f'<div style="display:grid; grid-template-columns:repeat({W}, 1.3em); justify-items:center; font-family: ui-monospace, monospace; font-weight:700; font-size:34px; color:#dc2626;">'
+    for ch in prod_str_raw.rjust(W):
+        html+=f'<div>{ch if ch.strip()!="" else ""}</div>'
+    html+='</div></div>'
+
+    html+= f'<div style="margin-top:10px; font-size:18px; font-weight:600;">{A} × {B} = <span style="color:#dc2626">{product}</span></div>'
     st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("**Passo a passo**")
     lines=[]
-    for p in d['partials']:
-        lines.append(f"{d['A']} × {p['digit']} = {d['A']*p['digit']} (produto parcial, deslocado {p['shift']} casa(s))")
-    lines.append(f"**Soma dos parciais = {A} × {B} = {d['product']}**")
+    for p in partials:
+        lines.append(f"{A} × {p['digit']} = {A*p['digit']} (parcial, deslocado {p['shift']} casa(s)) - cor {p['color']}")
+    lines.append(f"**Produto final = {product}**")
     st.markdown('\n'.join('- '+l for l in lines))
 
 def long_divide(dividend, divisor):
