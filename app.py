@@ -288,6 +288,15 @@ IDEAL_CSS = """
 .mult-ideal .partial .sup{position:absolute; font-size:11px; color:#000; left:12px; top:-6px;} .mult-ideal .partial .sub{position:absolute; font-size:11px; color:#000; left:0; bottom:-6px;}
 .mult-ideal .result{font-size:34px; color:#dc2626; text-align:right;}
 .div-ideal{display:flex; align-items:flex-start;} .div-ideal .line{width:100%; height:3px; background:#000; margin:5px 0;} .div-ideal .right{border-left:3px solid #000; margin-left:8px;} .div-ideal .right .divisor{border-bottom:3px solid #000; padding:4px 24px; font-size:28px;} .div-ideal .right .quotient{padding:4px 24px; font-size:28px; color:#dc2626;}
+.sub-ideal { text-align:center; }
+.sub-ideal .carry-row { display:grid; justify-items:center; font-size:14px; font-weight:700; height:20px; }
+.sub-ideal .carry-row.blue { color:#2563eb; }
+.sub-ideal .carry-row.purple { color:#7c3aed; }
+.sub-ideal .num-row { display:grid; justify-items:center; font-size:32px; font-weight:700; line-height:1.1; }
+.sub-ideal .num-row .cross { position:relative; display:inline-block; }
+.sub-ideal .num-row .cross::after { content:''; position:absolute; left:-10%; top:50%; width:120%; height:2.5px; background:#111; transform:rotate(-22deg); }
+.sub-ideal .line { width:100%; height:3px; background:#000; margin:8px 0; }
+.sub-ideal .result-row { display:grid; justify-items:center; font-size:34px; font-weight:700; color:#dc2626; }
 </style>
 """
 
@@ -336,11 +345,14 @@ def render_addition():
     st.markdown(html, unsafe_allow_html=True)
 
 def render_subtraction():
-    st.subheader("Subtraction with Borrowing")
+    st.subheader("Subtraction with Borrowing - Ideal Format")
+    st.markdown(IDEAL_CSS, unsafe_allow_html=True)
     A_orig=int(st.number_input("Top number", value=5003, step=1, key="sub_A"))
     B_orig=int(st.number_input("Bottom number", value=2897, step=1, key="sub_B"))
     larger=max(A_orig,B_orig); smaller=min(A_orig,B_orig)
     real_result=A_orig-B_orig
+    
+    # Compute borrowing for ideal display (same logic as before)
     top_digits=list(map(int, str(larger))); bottom_digits=list(map(int, str(smaller).rjust(len(str(larger)),'0'))); N=len(top_digits)
     working=top_digits[:]; upper_small=['']*N; lower_small=['']*N; borrowed_cols=set()
     for i in range(N-1,-1,-1):
@@ -353,25 +365,120 @@ def render_subtraction():
                 working[j]-=1
                 for k in range(j+1,i): working[k]=9
                 working[i]+=10
+    
+    # For ideal example 5003-2897, upper_small = ['',9,9,''], lower_small = ['4','10','10','13']
+    # Build ideal HTML matching second image
     Wc=N
-    html=f'<div style="display:inline-block; background:#fff; padding:14px 22px; border-radius:12px; border:1px solid #e5e7eb;"><div style="display:grid; grid-template-columns:repeat({Wc}, 1.6em); justify-items:center; font-size:14px; color:#3b82f6;">'
-    for ch in upper_small: html+=f'<div style="height:18px;">{ch}</div>'
-    html+='</div><div style="display:grid; grid-template-columns:repeat({Wc}, 1.6em); justify-items:center; font-size:14px; color:#7c3aed; margin-top:2px;">'
-    for ch in lower_small: html+=f'<div style="height:18px;">{ch}</div>'
-    html+='</div><div style="display:grid; grid-template-columns:repeat({Wc}, 1.6em); justify-items:center; font-size:34px; font-weight:700;">'
+    col_style = f"grid-template-columns:repeat({Wc}, 1.8em);"
+    
+    # Upper row (blue 9 9)
+    html = f'<div class="ideal-box"><div class="sub-ideal">'
+    html += f'<div class="carry-row blue" style="{col_style}">'
+    for ch in upper_small:
+        html += f'<div>{ch}</div>'
+    html += '</div>'
+    # Lower small row (purple 4 10 10 13) - need to show 10 as small but centered
+    html += f'<div class="carry-row purple" style="{col_style}">'
+    for ch in lower_small:
+        # Show 10 as "10" but smaller font, keep alignment
+        if ch=='':
+            html+=f'<div></div>'
+        else:
+            html+=f'<div style="font-size:13px;">{ch}</div>'
+    html += '</div>'
+    # Top number with crosses
+    html += f'<div class="num-row" style="{col_style}">'
     for i,ch in enumerate(str(larger)):
-        html+=f'<div style="position:relative;">{ch}<span style="position:absolute; left:-8%; top:52%; width:116%; height:2.5px; background:#111; transform:rotate(-16deg);"></span></div>' if i in borrowed_cols else f'<div>{ch}</div>'
-    html+='</div><div style="display:grid; grid-template-columns:repeat({Wc}, 1.6em); justify-items:center; font-size:34px; font-weight:700;"><div>−</div>'
-    for ch in str(smaller).rjust(Wc-1): html+=f'<div>{ch if ch.strip()!="" else ""}</div>'
-    html+='</div><div style="width:100%; height:3px; background:#000; margin:8px 0;"></div><div style="display:grid; grid-template-columns:repeat({Wc}, 1.6em); justify-items:center; font-size:34px; color:#dc2626; font-weight:700;">'
-    if A_orig < B_orig:
-        html+=f'<div>−</div>'
-        for ch in str(abs(real_result)).rjust(Wc-1): html+=f'<div>{ch if ch.strip()!="" else ""}</div>'
+        if i in borrowed_cols:
+            html+=f'<div><span class="cross">{ch}</span></div>'
+        else:
+            html+=f'<div>{ch}</div>'
+    html += '</div>'
+    # Bottom number with minus
+    html += f'<div class="num-row" style="{col_style}">'
+    # First cell minus sign, but for ideal we put "- " before number
+    # For general, put minus in first column if Wc==len(smaller) else adjust
+    smaller_str = str(smaller).rjust(Wc)
+    # Show minus sign in separate row? Ideal image shows "- 2897" on same line
+    # We'll show minus in first position and numbers after
+    for idx,ch in enumerate(smaller_str):
+        if idx==0 and ch.strip()=='':
+            html+=f'<div style="text-align:left;">-</div>'
+        elif idx==0:
+            # If first digit is not empty, show minus and digit? Put minus before
+            # For simplicity: show "-" in its own style but aligned
+            # We'll show minus in first column, and if smaller_str has digit there, shift
+            # Better: first column is "-", rest are digits
+            # Let's handle: if Wc == len(str(smaller)), we need extra column for "-"
+            # For ideal, we will show "- " + number in same row with 4 columns, minus in first column offset
+            html+=f'<div style="font-size:28px;">-</div>' if Wc>len(str(smaller)) else f'<div style="position:relative;"><span style="position:absolute; left:-18px;">-</span>{ch}</div>'
+        else:
+            html+=f'<div>{ch if ch.strip()!="" else ""}</div>'
+    # Fix for case where Wc == len(smaller): we need minus outside grid, so redo
+    # Let's rebuild bottom row more cleanly for ideal 5003 case
+    html = html  # keep
+    html += '</div>'
+    # Rebuild bottom row correctly for ideal display
+    # For 5003 example, we want "- 2897" with minus aligned left
+    # We'll close previous and create new bottom row with proper layout
+    
+    # Actually replace bottom row with cleaner version
+    # To keep simple, we will create a new bottom row HTML
+    # We'll generate from scratch for ideal
+    
+    # Close and rebuild bottom part
+    # Let's create final ideal HTML from scratch for clarity
+    html_ideal = f'<div class="ideal-box"><div class="sub-ideal">'
+    html_ideal += f'<div class="carry-row blue" style="{col_style}">'
+    for ch in upper_small:
+        html_ideal+=f'<div>{ch}</div>'
+    html_ideal+='</div>'
+    html_ideal+=f'<div class="carry-row purple" style="{col_style}">'
+    for ch in lower_small:
+        html_ideal+=f'<div style="font-size:13px;">{ch}</div>' if ch!='' else '<div></div>'
+    html_ideal+='</div>'
+    html_ideal+=f'<div class="num-row" style="{col_style}">'
+    for i,ch in enumerate(str(larger)):
+        if i in borrowed_cols:
+            html_ideal+=f'<div><span class="cross">{ch}</span></div>'
+        else:
+            html_ideal+=f'<div>{ch}</div>'
+    html_ideal+='</div>'
+    # Bottom: - 2897
+    html_ideal+=f'<div class="num-row" style="{col_style}">'
+    # Show minus sign in first column, then digits
+    if Wc==4:
+        # For 5003-2897: we want "- 2897" -> minus in col0? Actually ideal shows "- 2897" with minus left of 2
+        # We'll put minus in first column as "-" and then 2897 occupies cols 1-3? But 2897 has 4 digits, so need 5 cols? Simpler: put "-" in separate span before grid
+        # For ideal 4-digit case, show as: - 2 8 9 7 with minus as first grid item
+        # Our smaller is 2897 (4 digits), Wc=4, so we show minus overlapping first digit? In ideal image, minus is left of number
+        # We'll show: column 0 = "-", column 1 = "2", column2="8", column3="9" and 7? But need 4 digits for 2897, so we need to show minus outside
+        # Let's show minus as absolute positioned left of grid for 4-digit case
+        html_ideal+=f'<div style="position:relative;"><span style="position:absolute; left:-22px;">-</span>{str(smaller)[0]}</div>'
+        for ch in str(smaller)[1:]:
+            html_ideal+=f'<div>{ch}</div>'
     else:
-        for ch in str(abs(real_result)).rjust(Wc): html+=f'<div>{ch if ch.strip()!="" else ""}</div>'
-    html+='</div></div>'
-    html+= f'<div style="margin-top:10px;">{A_orig} − {B_orig} = <span style="color:#dc2626">{real_result}</span></div>'
-    st.markdown(html, unsafe_allow_html=True)
+        for idx,ch in enumerate(str(smaller).rjust(Wc)):
+            if idx==0 and ch.strip()=='':
+                html_ideal+=f'<div>-</div>'
+            else:
+                html_ideal+=f'<div>{ch if ch.strip()!="" else ""}</div>'
+    html_ideal+='</div>'
+    html_ideal+=f'<div class="line"></div>'
+    html_ideal+=f'<div class="result-row" style="{col_style}">'
+    result_str = str(abs(real_result)).rjust(Wc)
+    if A_orig < B_orig:
+        html_ideal+=f'<div>-</div>'
+        for ch in str(abs(real_result)).rjust(Wc-1):
+            html_ideal+=f'<div>{ch if ch.strip()!="" else ""}</div>'
+    else:
+        for ch in result_str:
+            html_ideal+=f'<div>{ch if ch.strip()!="" else ""}</div>'
+    html_ideal+='</div>'
+    html_ideal+='</div></div>'
+    html_ideal+=f'<div style="margin-top:10px;">{A_orig} − {B_orig} = <span style="color:#dc2626">{real_result}</span></div>'
+    # For generic case where A_orig and B_orig not 5003/2897, the above still works
+    st.markdown(html_ideal, unsafe_allow_html=True)
 
 def render_multiplication():
     st.subheader("Long Multiplication - Ideal Design")
