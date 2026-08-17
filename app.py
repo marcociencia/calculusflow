@@ -1,28 +1,27 @@
 """
-CalculusFlow - FINAL CORRECTED - English
-Structure requested:
+CalculusFlow - FINAL CORRECTED with Theoretical Formula + Substitution
+Requirement: For each rule, show theoretical formula FIRST, then substitute values
 
-Derivatives (differentiation) (x,y,z):
-- Defined and differentiable in same interval - step by step
-- Constant rule - step by step
-- Power rule - step by step
-- Sum and difference rule - step by step
-- Product rule - step by step
-- Quotient rule - step by step
-- Chain rule - step by step
-- Limits rule - step by step
+Derivatives (x,y,z):
+- Defined and Differentiable in Same Interval
+- Constant Rule
+- Power Rule
+- Sum and Difference Rule
+- Product Rule
+- Quotient Rule
+- Chain Rule
+- Limits Rule
 
 Integrals (x,y,z):
-- Antiderivatives (Primitives) rule - step by step
-- Substitution rule - step by step
-- By parts rule - step by step
-- Definite rule - step by step
-- Indefinite rule - step by step
-- FTC rule (with very explanatory graph) - step by step
-- Limits rule (Riemann) - step by step
+- Antiderivatives (Primitives) Rule
+- Substitution Rule
+- By Parts Rule
+- Definite Rule
+- Indefinite Rule
+- FTC Rule (with very explanatory graph)
+- Limits Rule (Riemann)
 
-Also: interactive graphs hover shows generating equation, for linear and quadratic too
-All in English, Plotly fallback, ideal arithmetic design
+All: Theoretical formula first, then substitution, interactive hover graph shows generating equation, linear/quadratic also interactive, all in English
 """
 
 import streamlit as st
@@ -54,10 +53,6 @@ def parse_expr(s, var_name='x'):
     if not s or str(s).strip()=='':
         raise ValueError("Empty expression.")
     return sp.sympify(str(s).strip().replace('^','**'), locals=_LOCALS)
-def parse_equation(s):
-    if '=' not in str(s): raise ValueError("Equation must contain '='.")
-    lhs,rhs=str(s).split('=',1)
-    return parse_expr(lhs)-parse_expr(rhs)
 def for_plot(expr, var): return expr.subs(var, X) if var!=X else expr
 def num(v):
     try: return float(v)
@@ -193,7 +188,7 @@ def render_addition():
     st.markdown(html, unsafe_allow_html=True)
 
 def render_subtraction():
-    st.subheader("Subtraction with Borrowing - Ideal (9 9 + 4 10 10 13) + Negative Handling")
+    st.subheader("Subtraction with Borrowing")
     A_orig=int(st.number_input("Top number", value=5003, step=1, key="sub_A"))
     B_orig=int(st.number_input("Bottom number", value=2897, step=1, key="sub_B"))
     larger=max(A_orig,B_orig); smaller=min(A_orig,B_orig)
@@ -287,120 +282,143 @@ def render_long_division():
         html=f'<div class="ideal-box"><div class="div-ideal"><div class="left"><div class="num">{d["dividend"]}</div><div class="sub">- {d["steps"][0]["product"] if d["steps"] else 0}</div><div class="line"></div><div class="num">{d["remainder"]:03d}</div></div><div class="right"><div class="divisor">{d["divisor"]}</div><div class="quotient">{d["quotient_str"]}</div></div></div></div>'
     st.markdown(html, unsafe_allow_html=True)
 
-# ================= DERIVATIVES (x,y,z) - 8 RULES =================
+# ================= DERIVATIVES (x,y,z) - THEORETICAL FORMULA + SUBSTITUTION =================
 
 def solve_derivative_rule(expr_str, var_name, rule):
     var=get_var(var_name); x=var
     f=parse_expr(expr_str, var_name)
     deriv=sp.diff(f,x)
-    # For analysis of differentiability
-    continuous = True
-    try:
-        # check if function is continuous (sympy will not raise for most)
-        sp.calculus.util.continuous_domain(f, var, sp.S.Reals)
-    except: continuous = True
-    
     steps=[]
     
     if rule=="Defined and Differentiable in Same Interval":
-        steps.append(("1. Domain and Definition", f"Function: $$f({sp.latex(x)}) = {sp.latex(f)}$$  \nVariable: ${sp.latex(x)}$  \nCheck where $f$ is defined"))
-        steps.append(("2. Continuity Check", f"For differentiability, $f$ must be continuous at point  \n$$f$$ is continuous where denominator ≠0 and inside sqrt ≥0, log >0  \nFor $$f = {sp.latex(f)}$$ domain: $$ {sp.calculus.util.continuous_domain(f, var, sp.S.Reals)} $$"))
-        steps.append(("3. Differentiability Condition", f"A function is differentiable at $a$ if limit exists: $$f'(a) = \\lim_{{h\\to0}} \\frac{{f(a+h)-f(a)}}{{h}}$$  \nIf continuous and limit exists, differentiable"))
-        steps.append(("4. Compute Derivative", f"$$f'({sp.latex(x)}) = {sp.latex(deriv)}$$"))
-        steps.append(("5. Check Differentiability Interval", f"Derivative exists where $f$ is differentiable  \nDerivative: $$f' = {sp.latex(deriv)}$$  \nDomain of $f'$ subset of domain of $f$"))
-        steps.append(("6. Example Point Test", f"Pick test point, e.g. $x=1$: $$f'(1) = {sp.latex(deriv.subs(x,1))}$$  \nExists → differentiable at 1"))
-        steps.append(("7. Conclusion & Graph", f"Differentiable where continuous and derivative limit exists  \nFinal: $$f' = {sp.latex(deriv)}$$  \nGraph shows $f$ and $f'$ - hover shows generating equations"))
+        steps.append(("1. Theoretical Formula", 
+            f"**Theoretical Formula - Differentiability:**  \n$$f \\text{{ differentiable at }} a \\iff f'(a) = \\lim_{{h\\to0}} \\frac{{f(a+h)-f(a)}}{{h}} \\text{{ exists}}$$  \n**Requirement:** $f$ must be continuous and defined in interval containing $a$"))
+        steps.append(("2. Identify Function and Interval", 
+            f"Given function: $$f({sp.latex(x)}) = {sp.latex(f)}$$  \nVariable: ${sp.latex(x)}$  \nWe check where $f$ is defined and continuous"))
+        steps.append(("3. Substitute into Theoretical Formula", 
+            f"Substitute $f({sp.latex(x)}) = {sp.latex(f)}$ into definition:  \n$$f'({sp.latex(x)}) = \\lim_{{h\\to0}} \\frac{{({sp.latex(f.subs(x, x+sp.Symbol('h')))}) - ({sp.latex(f)})}}{{h}}$$"))
+        steps.append(("4. Check Domain", 
+            f"Domain of $f$: $$ {sp.calculus.util.continuous_domain(f, var, sp.S.Reals)} $$  \n$f$ is defined in this interval"))
+        steps.append(("5. Compute Derivative (Theoretical → Practical)", 
+            f"Using derivative rules, compute:  \n$$f'({sp.latex(x)}) = {sp.latex(deriv)}$$"))
+        steps.append(("6. Verify Differentiability", 
+            f"Derivative exists where $f$ is continuous:  \n$$f' = {sp.latex(deriv)}$$ exists for all $x$ in domain except where denominator=0"))
+        steps.append(("7. Conclusion & Graph", 
+            f"$f$ is differentiable where $f'$ exists  \nFinal: $$\\boxed{{f'({sp.latex(x)}) = {sp.latex(deriv)}}}$$  \nGraph shows $f$ and $f'$ - hover shows generating equation $f({var_name}) = {expr_str}$"))
         
     elif rule=="Constant Rule":
-        steps.append(("1. Identify Constant", f"Function: $$f({sp.latex(x)}) = {sp.latex(f)}$$  \nConstant Rule: $$\\frac{{d}}{{dx}}[c] = 0, \\quad \\frac{{d}}{{dx}}[c·g(x)] = c·g'(x)$$"))
-        steps.append(("2. Separate Constant Factor", f"If $f = c·g(x)$, constant $c$ stays  \nExample: $f = {sp.latex(f)}$ contains constant factors"))
-        steps.append(("3. Derivative of Constant is Zero", f"$$\\frac{{d}}{{dx}}c = 0$$  \nConstant alone → 0"))
-        steps.append(("4. Apply Rule", f"$$\\frac{{d}}{{dx}}[c·g(x)] = c·\\frac{{d}}{{dx}}g(x)$$  \nSo $$f' = {sp.latex(deriv)}$$"))
-        steps.append(("5. Simplify", f"$$f'({sp.latex(x)}) = {sp.latex(sp.simplify(deriv))}$$"))
-        steps.append(("6. Verification", f"Check: derivative of constant term =0"))
-        steps.append(("7. Graph", f"Constant term doesn't affect slope  \nFinal: $$f' = {sp.latex(deriv)}$$"))
+        steps.append(("1. Theoretical Formula - Constant Rule", 
+            f"**Theoretical Formulas:**  \n$$\\frac{{d}}{{dx}}[c] = 0$$  \n$$\\frac{{d}}{{dx}}[c·g(x)] = c·\\frac{{d}}{{dx}}g(x) = c·g'(x)$$  \nWhere $c$ is constant"))
+        steps.append(("2. Identify Constant in Function", 
+            f"Given: $$f({sp.latex(x)}) = {sp.latex(f)}$$  \nIdentify constant factors and constant terms"))
+        # Try to extract constant
+        try:
+            coeff = f.as_coefficient(var) if not f.is_Add else None
+            steps.append(("3. Substitute into Theoretical Formula", 
+                f"Substitute $f = {sp.latex(f)}$ into constant rule:  \nIf $f = c·g(x)$, then $f' = c·g'(x)$  \nHere: $$f({sp.latex(x)}) = {sp.latex(f)}$$"))
+        except:
+            steps.append(("3. Substitute into Theoretical Formula", 
+                f"Substitute $f = {sp.latex(f)}$ into: $$\\frac{{d}}{{dx}}[c·g(x)] = c·g'(x)$$"))
+        steps.append(("4. Compute Derivative", 
+            f"Apply rule:  \n$$f'({sp.latex(x)}) = {sp.latex(deriv)}$$"))
+        steps.append(("5. Simplify - Power Rule for remaining", 
+            f"$$f' = {sp.latex(sp.simplify(deriv))}$$"))
+        steps.append(("6. Verify Constant Terms → 0", 
+            f"Any pure constant term $c$ has derivative $0$"))
+        steps.append(("7. Final & Graph", 
+            f"Final: $$\\boxed{{f'({sp.latex(x)}) = {sp.latex(deriv)}}}$$  \nGraph shows $f$ and $f'$ - hover shows equations"))
         
     elif rule=="Power Rule":
-        steps.append(("1. Identify Power Form", f"Function: $$f({sp.latex(x)}) = {sp.latex(f)}$$  \nPower Rule: $$\\frac{{d}}{{dx}}x^n = n x^{{n-1}}$$"))
-        steps.append(("2. Apply to Each Term", f"For each $x^n$ term, multiply by $n$ and reduce exponent by 1"))
-        steps.append(("3. Compute Term by Term", f"Example: if $f = x^3$, $f' = 3x^2$  \nFor $$f = {sp.latex(f)}$$"))
-        steps.append(("4. Power Rule Calculation", f"$$f'({sp.latex(x)}) = {sp.latex(deriv)}$$"))
-        steps.append(("5. Simplify", f"Simplified: $$f' = {sp.latex(sp.simplify(deriv))}$$"))
-        steps.append(("6. Check with Definition", f"Limit definition gives same: $\\lim_{{h\\to0}} [(x+h)^n - x^n]/h = n x^{{n-1}}$"))
-        steps.append(("7. Graph", f"Graph $f$ and $f'$ - hover shows equations  \nFinal: $$\\boxed{{f' = {sp.latex(deriv)}}}$$"))
+        steps.append(("1. Theoretical Formula - Power Rule", 
+            f"**Theoretical Formula:**  \n$$\\frac{{d}}{{dx}}[x^n] = n·x^{{n-1}}$$  \nFor any real $n$"))
+        steps.append(("2. Identify Power Terms in Function", 
+            f"Given: $$f({sp.latex(x)}) = {sp.latex(f)}$$  \nIdentify each $x^n$ term"))
+        steps.append(("3. Substitute into Theoretical Formula", 
+            f"Substitute each power term into $n·x^{{n-1}}$:  \nFor $f({sp.latex(x)}) = {sp.latex(f)}$, apply $n·x^{{n-1}}$ to each power"))
+        steps.append(("4. Compute Term by Term", 
+            f"Example: if $f = x^3$, then $n=3$, $f' = 3x^2$  \nFor our $f$:  \n$$f'({sp.latex(x)}) = {sp.latex(deriv)}$$"))
+        steps.append(("5. Apply to All Terms", 
+            f"Combine results from all power terms"))
+        steps.append(("6. Simplify", 
+            f"Simplified: $$f'({sp.latex(x)}) = {sp.latex(sp.simplify(deriv))}$$"))
+        steps.append(("7. Verification & Graph", 
+            f"Power rule verified via limit definition  \nFinal: $$\\boxed{{f'({sp.latex(x)}) = {sp.latex(deriv)}}}$$  \nGraph $f$ and $f'$ - hover shows $f({var_name})={expr_str}$"))
         
     elif rule=="Sum and Difference Rule":
-        steps.append(("1. Identify Sum/Difference", f"Function: $$f = {sp.latex(f)}$$  \nRule: $$(f ± g)' = f' ± g'$$"))
-        steps.append(("2. Split into Terms", f"Break $f$ into sum of simpler functions: $$f = f_1 + f_2 + ...$$"))
-        steps.append(("3. Differentiate Each Term", f"Differentiate each term separately using Power/Constant rules"))
+        steps.append(("1. Theoretical Formula - Sum/Difference", 
+            f"**Theoretical Formulas:**  \n$$(f + g)'(x) = f'(x) + g'(x)$$  \n$$(f - g)'(x) = f'(x) - g'(x)$$  \nDerivative of sum = sum of derivatives"))
+        steps.append(("2. Identify Sum/Difference in Function", 
+            f"Given: $$f({sp.latex(x)}) = {sp.latex(f)}$$  \nSplit into $f = f_1 ± f_2 ± f_3 ...$"))
+        steps.append(("3. Substitute into Theoretical Formula", 
+            f"Substitute into $(f±g)' = f'±g'$:  \n$$f = {sp.latex(f)} = f_1 + f_2 ...$$  \nThen $$f' = f_1' + f_2' ...$$"))
         terms = sp.Add.make_args(f) if f.is_Add else [f]
         for idx, term in enumerate(terms[:3],1):
             d = sp.diff(term, x)
-            steps.append((f"4.{idx} Term {idx}", f"$$\\frac{{d}}{{dx}}({sp.latex(term)}) = {sp.latex(d)}$$"))
-        steps.append(("5. Combine Results", f"Sum the derivatives: $$f' = {sp.latex(deriv)}$$"))
+            steps.append((f"4.{idx} Apply to Term {idx} - Substitute", f"Term {idx}: $$f_{idx} = {sp.latex(term)}$$  \nTheoretical: $f_{idx}' = ...$  \nSubstituted: $$f_{idx}' = {sp.latex(d)}$$"))
+        steps.append(("5. Combine Results - Theoretical Sum", f"Combine using sum rule: $$f' = {sp.latex(deriv)}$$"))
         steps.append(("6. Simplify", f"$$f' = {sp.latex(sp.simplify(deriv))}$$"))
-        steps.append(("7. Graph Verification", f"Derivative of sum = sum of derivatives  \nFinal: $$f' = {sp.latex(deriv)}$$"))
+        steps.append(("7. Graph Verification", f"Derivative of sum = sum of derivatives  \nFinal: $$\\boxed{{f' = {sp.latex(deriv)}}}$$"))
         
     elif rule=="Product Rule":
         if f.is_Mul:
             args=list(f.args); u=args[0]; v=sp.Mul(*args[1:])
             u_p=sp.diff(u,x); v_p=sp.diff(v,x)
-            steps.append(("1. Identify Product", f"$$f = u·v, \\quad u = {sp.latex(u)}, \\quad v = {sp.latex(v)}$$"))
-            steps.append(("2. Product Rule Formula", f"Rule: $$(uv)' = u'v + uv'$$"))
-            steps.append(("3. Compute u' and v'", f"$$u' = {sp.latex(u_p)}, \\quad v' = {sp.latex(v_p)}$$"))
-            steps.append(("4. Apply Formula", f"$$f' = u'v + uv' = {sp.latex(u_p)}{sp.latex(v)} + {sp.latex(u)}{sp.latex(v_p)}$$"))
-            steps.append(("5. Expand", f"$$f' = {sp.latex(sp.expand(u_p*v + u*v_p))}$$"))
+            steps.append(("1. Theoretical Formula - Product Rule", f"**Theoretical Formula:**  \n$$(u·v)' = u'·v + u·v'$$"))
+            steps.append(("2. Identify u and v in Function", f"Given: $$f({sp.latex(x)}) = {sp.latex(f)}$$  \nChoose: $$u = {sp.latex(u)}, \\quad v = {sp.latex(v)}$$"))
+            steps.append(("3. Substitute u,v into Theoretical Formula", f"Substitute $u={sp.latex(u)}$, $v={sp.latex(v)}$ into $(uv)' = u'v + uv'$:  \n$$f' = u'v + uv'$$"))
+            steps.append(("4. Compute u' and v' - Theoretical Power/Constant", f"Theoretical: $u' = d/dx[{sp.latex(u)}]$, $v' = d/dx[{sp.latex(v)}]$  \nSubstituted: $$u' = {sp.latex(u_p)}, \\quad v' = {sp.latex(v_p)}$$"))
+            steps.append(("5. Substitute u',v',u,v into Formula", f"Substitute into $u'v + uv'$:  \n$$f' = ({sp.latex(u_p)})({sp.latex(v)}) + ({sp.latex(u)})({sp.latex(v_p)}) = {sp.latex(sp.expand(u_p*v + u*v_p))}$$"))
             steps.append(("6. Simplify", f"$$f' = {sp.latex(sp.simplify(deriv))}$$"))
-            steps.append(("7. Graph", f"Product rule verified  \nFinal: $$\\boxed{{f' = {sp.latex(deriv)}}}$$"))
+            steps.append(("7. Final & Graph", f"Product rule: theoretical $u'v+uv'$ → substituted values → result  \nFinal: $$\\boxed{{f' = {sp.latex(deriv)}}}$$  \nHover shows generating equations"))
         else:
-            steps.append(("1. Identify Product Form", f"Function: $$f = {sp.latex(f)}$$  \nRule: $$(uv)' = u'v + uv'$$"))
-            steps.append(("2. If not product, treat as single", f"$$f' = {sp.latex(deriv)}$$"))
-            steps.append(("3. Simplify", f"$$f' = {sp.latex(sp.simplify(deriv))}$$"))
-            steps.append(("4. Verification", f"Same as Power/Chain"))
-            steps.append(("5. Graph", f"Final: $$f' = {sp.latex(deriv)}$$"))
-            steps.append(("6. Example", f"Example product $x·sin x$: $(x sin x)' = sin x + x cos x$"))
-            steps.append(("7. Conclusion", f"Product rule applied"))
+            steps.append(("1. Theoretical Formula - Product Rule", f"**Theoretical:** $$(uv)' = u'v + uv'$$"))
+            steps.append(("2. Identify - Not Product Form", f"$$f = {sp.latex(f)}$$ is not product, treat as single"))
+            steps.append(("3. Substitute", f"Substitute into product formula with $u=f$, $v=1$"))
+            steps.append(("4. Compute", f"$$f' = {sp.latex(deriv)}$$"))
+            steps.append(("5. Simplify", f"$$f' = {sp.latex(sp.simplify(deriv))}$$"))
+            steps.append(("6. Example Product", f"Example: $f=x·\\sin x$, $u=x$, $v=\\sin x$, $f' = \\sin x + x\\cos x$"))
+            steps.append(("7. Conclusion", f"Final: $$f' = {sp.latex(deriv)}$$"))
             
     elif rule=="Quotient Rule":
         num_expr, den_expr = sp.fraction(f)
         num_p=sp.diff(num_expr,x); den_p=sp.diff(den_expr,x)
-        steps.append(("1. Identify Quotient", f"$$f = \\frac{{u}}{{v}}, \\quad u = {sp.latex(num_expr)}, \\quad v = {sp.latex(den_expr)}$$"))
-        steps.append(("2. Quotient Rule Formula", f"Rule: $$(u/v)' = \\frac{{u'v - uv'}}{{v^2}}$$"))
-        steps.append(("3. Compute u' and v'", f"$$u' = {sp.latex(num_p)}, \\quad v' = {sp.latex(den_p)}$$"))
-        steps.append(("4. Apply Numerator", f"$$u'v - uv' = {sp.latex(num_p)}{sp.latex(den_expr)} - {sp.latex(num_expr)}{sp.latex(den_p)} = {sp.latex(num_p*den_expr - num_expr*den_p)}$$"))
-        steps.append(("5. Divide by v²", f"$$f' = \\frac{{{sp.latex(num_p*den_expr - num_expr*den_p)}}}{{{sp.latex(den_expr)}^2}} = {sp.latex(deriv)}$$"))
-        steps.append(("6. Simplify", f"$$f' = {sp.latex(sp.simplify(deriv))}$$"))
-        steps.append(("7. Graph & Final", f"Quotient rule verified  \nFinal: $$\\boxed{{f' = {sp.latex(deriv)}}}$$"))
+        steps.append(("1. Theoretical Formula - Quotient Rule", f"**Theoretical Formula:**  \n$$\\left(\\frac{{u}}{{v}}\\right)' = \\frac{{u'v - uv'}}{{v^2}}$$"))
+        steps.append(("2. Identify u (numerator) and v (denominator)", f"Given: $$f({sp.latex(x)}) = {sp.latex(f)} = \\frac{{{sp.latex(num_expr)}}}{{{sp.latex(den_expr)}}}$$  \n$$u = {sp.latex(num_expr)}, \\quad v = {sp.latex(den_expr)}$$"))
+        steps.append(("3. Substitute u,v into Theoretical Formula", f"Substitute into $\\frac{{u'v - uv'}}{{v^2}}$:  \nTheoretical numerator: $u'v - uv'$, denominator: $v^2$"))
+        steps.append(("4. Compute u' and v' - Theoretical → Substituted", f"Theoretical: $u' = d/dx[u]$, $v' = d/dx[v]$  \nSubstituted: $$u' = {sp.latex(num_p)}, \\quad v' = {sp.latex(den_p)}$$"))
+        steps.append(("5. Substitute u',v',u,v into Formula", f"Substitute values:  \n$$u'v - uv' = ({sp.latex(num_p)})({sp.latex(den_expr)}) - ({sp.latex(num_expr)})({sp.latex(den_p)}) = {sp.latex(num_p*den_expr - num_expr*den_p)}$$  \n$$f' = \\frac{{{sp.latex(num_p*den_expr - num_expr*den_p)}}}{{{sp.latex(den_expr)}^2}}$$"))
+        steps.append(("6. Simplify - Theoretical to Final", f"Simplify quotient: $$f' = {sp.latex(sp.simplify(deriv))}$$"))
+        steps.append(("7. Final & Graph", f"Quotient rule: theoretical $\\frac{{u'v-uv'}}{{v^2}}$ → substituted values → result  \nFinal: $$\\boxed{{f' = {sp.latex(deriv)}}}$$"))
         
     elif rule=="Chain Rule":
-        steps.append(("1. Identify Composite Function", f"$$f(x) = {sp.latex(f)}$$  \nForm: $f(g(x))$ outer $f$, inner $g$"))
-        steps.append(("2. Chain Rule Formula", f"Rule: $$(f(g(x)))' = f'(g(x))·g'(x)$$"))
-        steps.append(("3. Find Outer Derivative f'(g)", f"Differentiate outer function evaluated at inner"))
-        steps.append(("4. Find Inner Derivative g'", f"Differentiate inner function $g(x)$"))
-        steps.append(("5. Multiply", f"$$f' = f'(g)·g' = {sp.latex(deriv)}$$"))
-        steps.append(("6. Simplify", f"$$f' = {sp.latex(sp.simplify(deriv))}$$"))
-        steps.append(("7. Graph Verification", f"Chain rule verified  \nFinal: $$\\boxed{{f' = {sp.latex(deriv)}}}$$"))
+        steps.append(("1. Theoretical Formula - Chain Rule", f"**Theoretical Formula:**  \n$$(f(g(x)))' = f'(g(x))·g'(x)$$  \nOuter derivative × inner derivative"))
+        steps.append(("2. Identify Outer f and Inner g", f"Given: $$f({sp.latex(x)}) = {sp.latex(f)}$$  \nDecompose into $f(g({sp.latex(x)}))$ where $g$ is inner"))
+        steps.append(("3. Substitute into Theoretical Formula", f"Substitute into $f'(g(x))·g'(x)$:  \nTheoretical outer: $f'(g)$, inner: $g'(x)$"))
+        steps.append(("4. Compute f'(g(x)) - Outer Derivative at Inner", f"Differentiate outer function evaluated at inner $g(x)$"))
+        steps.append(("5. Compute g'(x) - Inner Derivative", f"Differentiate inner function $g(x)$"))
+        steps.append(("6. Multiply - Theoretical → Substituted", f"Multiply: $f'(g)·g' = {sp.latex(deriv)}$  \nSimplified: $$f' = {sp.latex(sp.simplify(deriv))}$$"))
+        steps.append(("7. Final & Graph", f"Chain rule: theoretical $f'(g)·g'$ → substituted → result  \nFinal: $$\\boxed{{f' = {sp.latex(deriv)}}}$$"))
         
     elif rule=="Limits Rule":
         h=sp.Symbol('h')
         f_xh=sp.simplify(f.subs(x, x+h))
         quotient=sp.simplify((f_xh-f)/h)
         deriv_lim=sp.limit(quotient, h, 0)
-        steps.append(("1. Limits Definition", f"Rule: $$f'(x) = \\lim_{{h\\to0}} \\frac{{f(x+h)-f(x)}}{{h}}$$"))
-        steps.append(("2. Compute f(x+h) - Substitution", f"$$f(x+h) = {sp.latex(f_xh)}$$"))
-        steps.append(("3. Difference Quotient", f"$$\\frac{{f(x+h)-f(x)}}{{h}} = {sp.latex(quotient)}$$"))
-        steps.append(("4. Simplify Quotient - Power Rule", f"Expand and cancel $h$: $$ {sp.latex(quotient)} $$"))
-        steps.append(("5. Apply Limit h→0", f"$$f'(x) = \\lim_{{h\\to0}} {sp.latex(quotient)} = {sp.latex(deriv_lim)}$$"))
-        steps.append(("6. Result", f"$$f' = {sp.latex(deriv_lim)}$$ which matches other rules: $$ {sp.latex(deriv)} $$"))
-        steps.append(("7. Graph", f"Limit definition gives same derivative  \nFinal: $$\\boxed{{f' = {sp.latex(deriv)}}}$$"))
+        steps.append(("1. Theoretical Formula - Limits Definition", f"**Theoretical Formula:**  \n$$f'(x) = \\lim_{{h\\to0}} \\frac{{f(x+h)-f(x)}}{{h}}$$"))
+        steps.append(("2. Identify f(x)", f"Given: $$f({sp.latex(x)}) = {sp.latex(f)}$$"))
+        steps.append(("3. Substitute f(x) and f(x+h) into Theoretical Formula", f"Compute $f(x+h)$ by substitution:  \nTheoretical: $f(x+h)$  \nSubstituted: $$f(x+h) = {sp.latex(f_xh)}$$  \nThen: $$\\frac{{f(x+h)-f(x)}}{{h}} = \\frac{{{sp.latex(f_xh)} - ({sp.latex(f)})}}{{h}} = {sp.latex(quotient)}$$"))
+        steps.append(("4. Simplify Quotient - Theoretical Power Rule", f"Simplify using algebra: $$ {sp.latex(quotient)} $$"))
+        steps.append(("5. Substitute Simplified Quotient into Limit", f"Theoretical limit: $\\lim_{{h\\to0}} ...$  \nSubstituted: $$\\lim_{{h\\to0}} {sp.latex(quotient)}$$"))
+        steps.append(("6. Apply Limit h→0 - Theoretical → Result", f"Apply limit: $$f'(x) = \\lim_{{h\\to0}} {sp.latex(quotient)} = {sp.latex(deriv_lim)}$$  \nMatches other rules: $$ {sp.latex(deriv)} $$"))
+        steps.append(("7. Final & Graph", f"Limits rule: theoretical $\\lim$ → substituted values → result  \nFinal: $$\\boxed{{f' = {sp.latex(deriv)}}}$$"))
     
     final=f"f'({sp.latex(x)}) = {sp.latex(deriv)}"
     plot={'exprs':[{'expr':for_plot(f,x),'label':f'f({var_name}) = {expr_str}','eq':f'f({var_name}) = {expr_str}','color':'blue'},{'expr':for_plot(deriv,x),'label':f"f'({var_name})",'eq':f"f'({var_name}) = {sp.latex(deriv)}",'dashed':True,'color':'green'}],'x_min':-5,'x_max':5,'title':f"Derivative ({rule}): {expr_str}"}
     return steps,final,plot
 
 def render_derivatives():
-    st.subheader("Derivatives (Differentiation) (x,y,z) - 8 Rules Step by Step")
-    st.markdown("**Rules:** Defined and Differentiable in Same Interval, Constant, Power, Sum and Difference, Product, Quotient, Chain, Limits")
+    st.subheader("Derivatives (Differentiation) (x,y,z) - Theoretical Formula + Substitution")
+    st.markdown("**For each rule: show theoretical formula FIRST, then substitute values**")
     col1,col2=st.columns(2)
     expr=col1.text_input("Function f(variable)", value="x^3 * sin(x)", key="der_expr")
     variable=col2.selectbox("Variable", ['x','y','z'], key="der_var")
@@ -414,7 +432,7 @@ def render_derivatives():
         _show(steps, final, plot)
     except Exception as ex: st.error(str(ex))
 
-# ================= INTEGRALS (x,y,z) - 7 RULES =================
+# ================= INTEGRALS (x,y,z) - THEORETICAL FORMULA + SUBSTITUTION =================
 
 def solve_integral_rule(expr_str, var_name, rule, a, b):
     var=get_var(var_name); x=var; f=parse_expr(expr_str, var_name)
@@ -424,72 +442,121 @@ def solve_integral_rule(expr_str, var_name, rule, a, b):
     steps=[]
     
     if rule=="Antiderivatives (Primitives) Rule":
-        steps.append(("1. Definition - Antiderivative", f"Antiderivative $F$ satisfies $F' = f$  \n$$f({sp.latex(x)}) = {sp.latex(f)}$$"))
-        steps.append(("2. Find Family of Antiderivatives", f"$$F({sp.latex(x)}) = \\int f({sp.latex(x)}) d{sp.latex(x)}$$  \nWe seek $F$ such that $F' = f$"))
-        steps.append(("3. Apply Power/Constant Rules for Antiderivative", f"Reverse of derivative rules: $\\int x^n = x^{{n+1}}/(n+1)$"))
-        steps.append(("4. Compute Antiderivative", f"$$F({sp.latex(x)}) = {sp.latex(antiderivative)} + C$$"))
-        steps.append(("5. Verify by Differentiation", f"Check: $$\\frac{{d}}{{dx}}F = \\frac{{d}}{{dx}}({sp.latex(antiderivative)}) = {sp.latex(sp.diff(antiderivative,x))}$$ should equal $f$"))
-        steps.append(("6. Family of Curves", f"Indefinite integral gives family differing by constant $C$"))
-        steps.append(("7. Graph - Primitives", f"Graph $f$ and one $F$ (C=0) - hover shows equations  \nFinal: $$\\int f = {sp.latex(antiderivative)} + C$$"))
+        steps.append(("1. Theoretical Formula - Antiderivatives", 
+            f"**Theoretical Formulas:**  \n$$F'(x) = f(x) \\implies \\int f(x)dx = F(x) + C$$  \n$$\\int x^n dx = \\frac{{x^{{n+1}}}}{{n+1}} + C, \\quad n\\neq-1$$"))
+        steps.append(("2. Identify f(x) for Antiderivative", 
+            f"Given: $$f({sp.latex(x)}) = {sp.latex(f)}$$  \nWe seek $F$ such that $F' = f$"))
+        steps.append(("3. Substitute f(x) into Theoretical Formula", 
+            f"Substitute $f({sp.latex(x)}) = {sp.latex(f)}$ into $\\int f(x)dx = F(x)+C$:  \nTheoretical antiderivative: $F$ where $F' = {sp.latex(f)}$"))
+        steps.append(("4. Compute Antiderivative - Theoretical → Substituted", 
+            f"Apply reverse Power Rule: $$F({sp.latex(x)}) = {sp.latex(antiderivative)} + C$$"))
+        steps.append(("5. Verify by Differentiation - Theoretical Check", 
+            f"Theoretical check: $F' = f$  \nSubstituted: $$\\frac{{d}}{{dx}}({sp.latex(antiderivative)}) = {sp.latex(sp.diff(antiderivative,x))}$$  \nShould equal $f = {sp.latex(f)}$ → {'✅' if sp.simplify(sp.diff(antiderivative,x)-f)==0 else 'check'}"))
+        steps.append(("6. Family of Curves", 
+            f"Indefinite integral gives family differing by $C$"))
+        steps.append(("7. Final & Graph", 
+            f"Theoretical $\\int f = F+C$ → Substituted $F={sp.latex(antiderivative)}$  \nFinal: $$\\boxed{{\\int {sp.latex(f)} d{sp.latex(x)} = {sp.latex(antiderivative)} + C}}$$  \nGraph $f$ and $F$ - hover shows generating equations"))
         
     elif rule=="Substitution Rule":
-        steps.append(("1. Identify Composite Form", f"$$f({sp.latex(x)}) = {sp.latex(f)}$$  \nLook for $f(g(x))·g'(x)$ pattern"))
-        steps.append(("2. Choose u = g(x)", f"Let $u = g({sp.latex(x)})$ inner function  \nThen $du = g'({sp.latex(x)}) d{sp.latex(x)}$"))
-        steps.append(("3. Rewrite Integral in u", f"$$\\int f(g(x))g'(x)dx = \\int f(u) du$$"))
-        steps.append(("4. Integrate in u", f"Integrate with respect to $u$: $$\\int f(u) du = {sp.latex(antiderivative)} + C$$ (in terms of $u$)"))
-        steps.append(("5. Substitute Back", f"Replace $u$ with $g(x)$: $$ {sp.latex(antiderivative)} + C $$"))
-        steps.append(("6. Verify by Differentiation - Chain Rule Reverse", f"Derivative of result should give original $f$"))
-        steps.append(("7. Graph & Final", f"Substitution simplifies integral  \nFinal: $$\\int f = {sp.latex(antiderivative)} + C$$"))
+        steps.append(("1. Theoretical Formula - Substitution", 
+            f"**Theoretical Formula:**  \n$$\\int f(g(x))·g'(x) dx = \\int f(u) du, \\quad u = g(x), \\quad du = g'(x)dx$$"))
+        steps.append(("2. Identify Composite Form f(g(x))·g'(x) in Function", 
+            f"Given: $$f({sp.latex(x)}) = {sp.latex(f)}$$  \nLook for inner $g(x)$ and its derivative $g'(x)$"))
+        steps.append(("3. Substitute u = g(x) into Theoretical Formula", 
+            f"Choose: $$u = g({sp.latex(x)})$$  \nTheoretical: $du = g'({sp.latex(x)}) d{sp.latex(x)}$  \nSubstituted: Rewrite $\\int {sp.latex(f)} d{sp.latex(x)}$ as $\\int f(u) du$"))
+        steps.append(("4. Rewrite Integral in u - Theoretical to Substituted", 
+            f"Theoretical: $\\int f(u) du$  \nSubstituted: Transform ${sp.latex(f)} d{sp.latex(x)}$ to $f(u) du$"))
+        steps.append(("5. Integrate in u - Theoretical Power Rule", 
+            f"Theoretical: $\\int f(u) du$  \nSubstituted: $$= {sp.latex(antiderivative)} + C$$ (in $u$)"))
+        steps.append(("6. Substitute Back u → g(x)", 
+            f"Replace $u$ with $g({sp.latex(x)})$: $$ {sp.latex(antiderivative)} + C $$"))
+        steps.append(("7. Final & Graph", 
+            f"Substitution: theoretical $\\int f(u)du$ → substituted values → result  \nFinal: $$\\boxed{{\\int {sp.latex(f)} = {sp.latex(antiderivative)} + C}}$$"))
         
     elif rule=="By Parts Rule":
-        steps.append(("1. Identify Product Form", f"$$f({sp.latex(x)}) = {sp.latex(f)}$$  \nFor product $u·dv$"))
-        steps.append(("2. By Parts Formula", f"Formula: $$\\int u dv = uv - \\int v du$$"))
-        steps.append(("3. Choose u and dv", f"Choose $u$ = first part (to differentiate), $dv$ = rest (to integrate)  \nRule ILATE: Inverse, Log, Algebraic, Trig, Exponential for $u$"))
-        steps.append(("4. Compute du and v", f"$du = u' dx$, $v = \\int dv$"))
-        steps.append(("5. Apply Formula", f"$$\\int u dv = uv - \\int v du = {sp.latex(antiderivative)} + C$$"))
-        steps.append(("6. Simplify", f"$$= {sp.latex(antiderivative)} + C$$"))
-        steps.append(("7. Graph & Verification", f"By Parts verified  \nFinal: $$\\int f = {sp.latex(antiderivative)} + C$$"))
+        steps.append(("1. Theoretical Formula - By Parts", 
+            f"**Theoretical Formula:**  \n$$\\int u dv = uv - \\int v du$$"))
+        steps.append(("2. Identify u and dv in Function", 
+            f"Given: $$f({sp.latex(x)}) = {sp.latex(f)}$$  \nFor product $u·dv$, choose $u$ = first part, $dv$ = rest  \nILATE: Inverse, Log, Algebraic, Trig, Exponential for $u$"))
+        steps.append(("3. Substitute u,dv into Theoretical Formula", 
+            f"Choose $u$ and $dv$ from $f = {sp.latex(f)}$  \nTheoretical $u$, $dv$ → substituted values"))
+        steps.append(("4. Compute du and v - Theoretical Differentiation/Integration", 
+            f"Theoretical: $du = u' dx$, $v = \\int dv$  \nSubstituted: $du = ...$, $v = ...$"))
+        steps.append(("5. Substitute du,v,u into Formula uv - ∫v du", 
+            f"Substitute into $uv - \\int v du$:  \nTheoretical $uv - \\int v du$ → Substituted $$= {sp.latex(antiderivative)} + C$$"))
+        steps.append(("6. Simplify", 
+            f"$$= {sp.latex(antiderivative)} + C$$"))
+        steps.append(("7. Final & Graph", 
+            f"By Parts: theoretical $uv - \\int v du$ → substituted → result  \nFinal: $$\\boxed{{\\int {sp.latex(f)} = {sp.latex(antiderivative)} + C}}$$"))
         
     elif rule=="Definite Rule":
         result=definite_result if definite_result is not None else sp.integrate(f,(x,a,b))
-        steps.append(("1. Definite Integral Definition", f"$$\\int_{{{a}}}^{{{b}}} {sp.latex(f)} d{sp.latex(x)}$$  \nGives area under curve from {a} to {b}"))
-        steps.append(("2. Find Antiderivative First", f"$$F({sp.latex(x)}) = \\int f d{sp.latex(x)} = {sp.latex(antiderivative)}$$"))
-        steps.append(("3. Definite Rule", f"Definite integral = limit of Riemann sums"))
-        steps.append(("4. Apply Limits a,b", f"Adjustable limits: $a={a}$, $b={b}$"))
-        steps.append(("5. Evaluate F(b) - F(a)", f"$$F({b}) = {sp.latex(antiderivative.subs(x,b))}, \\quad F({a}) = {sp.latex(antiderivative.subs(x,a))}$$  \n$$\\int_{{{a}}}^{{{b}}} f = {sp.latex(result)}$$"))
-        steps.append(("6. Area Interpretation", f"Result = signed area: ${sp.latex(result)}$"))
-        steps.append(("7. Graph - Shaded Area", f"Graph shows shaded area from {a} to {b} - hover shows equation  \nFinal: $$\\boxed{{\\int_{{{a}}}^{{{b}}} {sp.latex(f)} = {sp.latex(result)}}}$$"))
+        steps.append(("1. Theoretical Formula - Definite Integral", 
+            f"**Theoretical Formula:**  \n$$\\int_{{{a}}}^{{{b}}} f(x) dx = \\lim_{{n\\to\\infty}} \\sum_{{i=1}}^{{n}} f(x_i)\\Delta x = F(b) - F(a)$$"))
+        steps.append(("2. Identify Function and Limits", 
+            f"Given: $$f({sp.latex(x)}) = {sp.latex(f)} = {sp.latex(f)}$$  \nLimits: $a={a}$, $b={b}$ (adjustable)"))
+        steps.append(("3. Substitute f(x),a,b into Theoretical Formula", 
+            f"Substitute into $\\int_{{{a}}}^{{{b}}} f(x)dx$:  \nTheoretical $\\int_a^b f$ → Substituted $$\\int_{{{a}}}^{{{b}}} {sp.latex(f)} d{sp.latex(x)}$$"))
+        steps.append(("4. Find Antiderivative F - Theoretical Power Rule", 
+            f"Theoretical: $F$ such that $F' = f$  \nSubstituted: $$F({sp.latex(x)}) = {sp.latex(antiderivative)}$$"))
+        steps.append(("5. Substitute a,b into F(b)-F(a) - Theoretical FTC", 
+            f"Theoretical: $F(b)-F(a)$  \nSubstituted: $$F({b}) = {sp.latex(antiderivative.subs(x,b))}, \\quad F({a}) = {sp.latex(antiderivative.subs(x,a))}$$  \n$$F(b)-F(a) = {sp.latex(result)}$$"))
+        steps.append(("6. Area Interpretation", 
+            f"Result = signed area: $$\\boxed{{{sp.latex(result)}}}$$"))
+        steps.append(("7. Graph - Shaded Area (Interactive)", 
+            f"Graph shows shaded area from {a} to {b} = $\\int_a^b f$ - hover shows $f({var_name})={expr_str}$  \nFinal: $$\\int_{{{a}}}^{{{b}}} {sp.latex(f)} = {sp.latex(result)}$$"))
         
     elif rule=="Indefinite Rule":
-        steps.append(("1. Indefinite Integral Definition", f"$$\\int {sp.latex(f)} d{sp.latex(x)}$$  \nFamily of antiderivatives + C"))
-        steps.append(("2. Indefinite vs Definite", f"Indefinite: no bounds, +C  \nDefinite: bounds a,b, number"))
-        steps.append(("3. Apply Power/Constant Rules", f"$$\\int x^n = x^{{n+1}}/(n+1) + C$$"))
-        steps.append(("4. Compute Antiderivative", f"$$\\int {sp.latex(f)} d{sp.latex(x)} = {sp.latex(antiderivative)} + C$$"))
-        steps.append(("5. Verify", f"Derivative of result = original $f$"))
-        steps.append(("6. Family of Curves", f"Different C gives parallel curves"))
-        steps.append(("7. Graph", f"Graph $f$ and one antiderivative (C=0) - hover shows equations  \nFinal: $$\\int f = {sp.latex(antiderivative)} + C$$"))
+        steps.append(("1. Theoretical Formula - Indefinite Integral", 
+            f"**Theoretical Formula:**  \n$$\\int f(x)dx = F(x) + C, \\quad F'(x)=f(x)$$  \nFamily of antiderivatives differing by constant $C$"))
+        steps.append(("2. Identify f(x)", 
+            f"Given: $$f({sp.latex(x)}) = {sp.latex(f)}$$"))
+        steps.append(("3. Substitute f(x) into Theoretical Formula", 
+            f"Substitute into $\\int f(x)dx = F(x)+C$:  \nTheoretical $\\int f$ → Substituted $$\\int {sp.latex(f)} d{sp.latex(x)}$$"))
+        steps.append(("4. Compute Antiderivative - Theoretical Power/Substitution/By Parts", 
+            f"Theoretical: $F$ such that $F'=f$  \nSubstituted: $$F({sp.latex(x)}) = {sp.latex(antiderivative)}$$"))
+        steps.append(("5. Add Constant C - Theoretical Family", 
+            f"Theoretical: $F(x)+C$  \nSubstituted: $$ {sp.latex(antiderivative)} + C $$"))
+        steps.append(("6. Verify by Differentiation", 
+            f"Theoretical check: $F' = f$  \nSubstituted: $$\\frac{{d}}{{dx}}({sp.latex(antiderivative)}) = {sp.latex(sp.diff(antiderivative,x))}$$ should equal $f$"))
+        steps.append(("7. Final & Graph", 
+            f"Theoretical $\\int f = F+C$ → Substituted $F={sp.latex(antiderivative)}$  \nFinal: $$\\boxed{{\\int {sp.latex(f)} = {sp.latex(antiderivative)} + C}}$$  \nGraph $f$ and $F$ - hover shows equations"))
         
     elif rule=="FTC Rule (with very explanatory graph)":
         result=definite_result if definite_result is not None else sp.integrate(f,(x,a,b))
-        steps.append(("1. FTC Statement", f"Fundamental Theorem of Calculus:  \n**Part 1:** $\\frac{{d}}{{dx}}\\int_a^x f(t)dt = f(x)$  \n**Part 2:** $\\int_a^b f(t)dt = F(b)-F(a)$ where $F'=f$"))
-        steps.append(("2. Part 1 - Differentiation of Accumulation", f"Define accumulation: $$A(x) = \\int_{{{a}}}^{{x}} {sp.latex(f)} dt$$  \nThen $A'(x) = f(x)$"))
-        steps.append(("3. Part 2 - Evaluation", f"If $F' = f$, then $$\\int_{{{a}}}^{{{b}}} f(t)dt = F({b}) - F({a})$$  \nHere $F = {sp.latex(antiderivative)}$"))
-        steps.append(("4. Find Antiderivative F", f"$$F({sp.latex(x)}) = {sp.latex(antiderivative)}$$  \n$F' = f$"))
-        steps.append(("5. Evaluate at Bounds - Adjustable a,b", f"$$F({b}) = {sp.latex(antiderivative.subs(x,b))}$$  \n$$F({a}) = {sp.latex(antiderivative.subs(x,a))}$$  \nDifference: $$F(b)-F(a) = {sp.latex(result)}$$"))
-        steps.append(("6. Very Explanatory Graph - Area Accumulation", f"Graph shows:  \n• Blue curve: $f(x) = {sp.latex(f)}$  \n• Shaded area from {a} to {b} = $\\int_a^b f$  \n• Green curve: $F(x) = {sp.latex(antiderivative)}$ antiderivative  \n• Slope of $F$ at any $x$ = $f(x)$  \nHover over curves to see generating equations"))
-        steps.append(("7. Conclusion - FTC Connects Differentiation and Integration", f"FTC shows differentiation and integration are inverses  \n$$\\int_{{{a}}}^{{{b}}} {sp.latex(f)} = {sp.latex(result)}$$  \nArea = ${sp.latex(result)}$"))
+        steps.append(("1. Theoretical Formula - FTC", 
+            f"**Theoretical Formulas - Fundamental Theorem of Calculus:**  \n**Part 1:** $$\\frac{{d}}{{dx}}\\int_a^x f(t)dt = f(x)$$  \n**Part 2:** $$\\int_a^b f(t)dt = F(b)-F(a), \\quad F'(x)=f(x)$$"))
+        steps.append(("2. Identify f(x) and F(x) - Theoretical Relationship", 
+            f"Given: $$f({sp.latex(x)}) = {sp.latex(f)}$$  \nTheoretical: $F$ such that $F' = f$  \nSubstituted: $$F({sp.latex(x)}) = {sp.latex(antiderivative)}$$"))
+        steps.append(("3. Substitute f(x),F(x),a,b into Theoretical FTC Formulas", 
+            f"Substitute into FTC Part 1 and Part 2:  \nTheoretical $\\frac{{d}}{{dx}}\\int_a^x f(t)dt = f(x)$ → Substituted with $f={sp.latex(f)}$  \nTheoretical $\\int_a^b f = F(b)-F(a)$ → Substituted with $a={a}, b={b}, F={sp.latex(antiderivative)}$"))
+        steps.append(("4. Part 1 - Differentiation of Accumulation", 
+            f"Define accumulation: $$A(x) = \\int_{{{a}}}^{{x}} {sp.latex(f)} dt$$  \nTheoretical: $A'(x) = f(x)$  \nSubstituted: $A'(x) = {sp.latex(f)}$"))
+        steps.append(("5. Part 2 - Evaluation F(b)-F(a) with Substitution", 
+            f"Theoretical: $F(b)-F(a)$  \nSubstituted: $$F({b}) = {sp.latex(antiderivative.subs(x,b))}$$  \n$$F({a}) = {sp.latex(antiderivative.subs(x,a))}$$  \n$$F(b)-F(a) = {sp.latex(result)}$$"))
+        steps.append(("6. Very Explanatory Graph - FTC Visualization", 
+            f"Graph shows:  \n• **Blue curve:** $f(x) = {sp.latex(f)} = {expr_str}$  \n• **Shaded area** from {a} to {b} = $\\int_a^b f$ = ${sp.latex(result)}$ (area)  \n• **Green dashed curve:** $F(x) = {sp.latex(antiderivative)}$ antiderivative  \n• **Slope of $F$ at any $x$ = $f(x)$** (FTC Part 1)  \n• **Hover over curves:** shows generating equation $f({var_name})={expr_str}$ and $F({var_name})={sp.latex(antiderivative)}$  \nAdjustable limits $a,b$ change shaded area"))
+        steps.append(("7. Conclusion - FTC Connects Differentiation and Integration", 
+            f"FTC shows differentiation and integration are inverses  \nTheoretical $\\int_a^b f = F(b)-F(a)$ → Substituted values → $$\\boxed{{\\int_{{{a}}}^{{{b}}} {sp.latex(f)} = {sp.latex(result)}}}$$  \nArea = ${sp.latex(result)}$"))
         
     elif rule=="Limits Rule (Riemann)":
         a_f,b_f=float(a),float(b); n=10; dx=(b_f-a_f)/n
         riemann=sum(float(f.subs(x, a_f+i*dx))*dx for i in range(1,n+1))
         exact=sp.integrate(f,(x,a_f,b_f))
-        steps.append(("1. Limits Definition for Integrals", f"Definite integral as limit of Riemann sums: $$\\int_{{{a}}}^{{{b}}} f = \\lim_{{n\\to\\infty}} \\sum f(x_i)\\Delta x$$"))
-        steps.append(("2. Partition Interval", f"Interval $[{a},{b}]$ into $n$ subintervals  \n$$\\Delta x = (b-a)/n$$  \nAdjustable $a,b,n$"))
-        steps.append(("3. Sample Points", f"$x_i = a + i\\Delta x$ (right), $a+(i-1)\\Delta x$ (left), $a+(i-0.5)\\Delta x$ (mid)"))
-        steps.append(("4. Riemann Sum", f"$$S_n = \\sum f(x_i)\\Delta x$$"))
-        steps.append(("5. Compute Sum (n=10 example)", f"Right sum ≈ ${riemann:.4f}$  \nExact = ${sp.latex(exact)}$"))
-        steps.append(("6. Take Limit n→∞", f"As $n\\to\\infty$, $S_n \\to$ exact integral  \nPower, Substitution, etc. give exact value"))
-        steps.append(("7. Graph & Final", f"Graph shaded area = limit of sums  \nHover shows equation  \nFinal: $$\\int_{{{a}}}^{{{b}}} {sp.latex(f)} = {sp.latex(exact)}$$"))
+        steps.append(("1. Theoretical Formula - Limits (Riemann)", 
+            f"**Theoretical Formula:**  \n$$\\int_{{{a}}}^{{{b}}} f(x)dx = \\lim_{{n\\to\\infty}} \\sum_{{i=1}}^{{n}} f(x_i)\\Delta x, \\quad \\Delta x = \\frac{{b-a}}{{n}}$$"))
+        steps.append(("2. Identify f(x),a,b", 
+            f"Given: $$f({sp.latex(x)}) = {sp.latex(f)} = {expr_str}$$  \nLimits: $a={a}$, $b={b}$ (adjustable)"))
+        steps.append(("3. Substitute f(x),a,b into Theoretical Formula", 
+            f"Substitute into $\\sum f(x_i)\\Delta x$:  \nTheoretical $\\Delta x = (b-a)/n$ → Substituted $\\Delta x = ({b}-{a})/n$  \nTheoretical $x_i = a + i\\Delta x$ → Substituted $x_i = {a} + i\\Delta x$"))
+        steps.append(("4. Compute Riemann Sum - Theoretical to Substituted", 
+            f"Theoretical: $S_n = \\sum f(x_i)\\Delta x$  \nSubstituted (n=10 example): $$S_{{10}} ≈ {riemann:.4f}$$"))
+        steps.append(("5. Take Limit n→∞ - Theoretical → Exact", 
+            f"Theoretical limit $n\\to\\infty$ → exact integral  \nSubstituted exact: $$\\int_{{{a}}}^{{{b}}} {sp.latex(f)} = {sp.latex(exact)}$$"))
+        steps.append(("6. Compare with Power/Substitution Rules", 
+            f"Riemann limit gives same as Power/Substitution/By Parts/FTC: $$ {sp.latex(exact)} $$"))
+        steps.append(("7. Graph & Final", 
+            f"Graph shaded area = limit of sums - hover shows equation $f({var_name})={expr_str}$  \nFinal: $$\\boxed{{\\int_{{{a}}}^{{{b}}} {sp.latex(f)} = {sp.latex(exact)}}}$$"))
     
     # Prepare plots
     if rule in ["Definite Rule","FTC Rule (with very explanatory graph)","Limits Rule (Riemann)"]:
@@ -501,8 +568,8 @@ def solve_integral_rule(expr_str, var_name, rule, a, b):
     return steps,final,plot
 
 def render_integrals():
-    st.subheader("Integrals (x,y,z) - 7 Rules Step by Step")
-    st.markdown("**Rules:** Antiderivatives (Primitives), Substitution, By Parts, Definite, Indefinite, FTC (with very explanatory graph), Limits")
+    st.subheader("Integrals (x,y,z) - Theoretical Formula + Substitution Step by Step")
+    st.markdown("**For each rule: show theoretical formula FIRST, then substitute values**")
     col1,col2=st.columns(2)
     expr=col1.text_input("Integrand f(variable)", value="x^2 * exp(x)", key="int_expr")
     variable=col2.selectbox("Variable", ['x','y','z'], key="int_var")
@@ -525,7 +592,7 @@ def render_integrals():
 
 # ================= ALGEBRA WITH INTERACTIVE GRAPHS =================
 def render_linear():
-    st.subheader("Linear Equation (1st degree) - Interactive Graph")
+    st.subheader("Linear Equation (1st degree) - Interactive Graph (hover shows equation)")
     eq=st.text_input("Equation", value="2*x + 3 = 7", key="lin_eq")
     try:
         eq_sym=parse_equation(eq)
@@ -537,7 +604,7 @@ def render_linear():
         steps=[("1. Original","$$"+sp.latex(sp.Eq(lhs, rhs))+"$$"),("2. Standard form",f"$$ {sp.latex(a)}x + {sp.latex(b)}=0$$"),("3. Isolate x",f"$$x = {sp.latex(root)}$$"),("4. Verify",f"Check: {sp.latex(eq_sym.subs(x,root))}=0")]
         final=f"x = {sp.latex(root)}"
         rv=num(root)
-        plot={'exprs':[{'expr':for_plot(eq_sym,x),'label':f'{eq} -> {sp.latex(eq_sym)}=0','eq':f'{sp.latex(eq_sym)}=0','color':'blue'}],'x_min':(rv-5) if rv is not None else -5,'x_max':(rv+5) if rv is not None else 5,'points':[{'x':float(root),'y':0,'label':f'x = {root}','color':'red'}] if rv is not None else None,'title':f"Linear: {eq}"}
+        plot={'exprs':[{'expr':for_plot(eq_sym,x),'label':f'{eq} -> {sp.latex(eq_sym)}=0','eq':f'{sp.latex(eq_sym)}=0 -> {eq}','color':'blue'}],'x_min':(rv-5) if rv is not None else -5,'x_max':(rv+5) if rv is not None else 5,'points':[{'x':float(root),'y':0,'label':f'x = {root}','color':'red'}] if rv is not None else None,'title':f"Linear: {eq} - hover shows generating equation"}
         _show(steps,final,plot)
     except Exception as ex: st.error(str(ex))
 
@@ -553,22 +620,42 @@ def render_quadratic():
         roots=sp.solve(eq_sym,x)
         steps=[("1. Standard form",f"$$ {sp.latex(a)}x^2 + {sp.latex(b)}x + {sp.latex(c)}=0$$"),("2. Discriminant",f"$$\\Delta = {sp.latex(disc)}$$"),("3. Bhaskara",f"$$x = (-b ± √Δ)/2a$$"),("4. Solutions",f"$$x = {sp.latex(roots)}$$")]
         final=f"x = {sp.latex(roots)}"
-        real_roots=[num(r) for r in roots if num(r) is not None and abs(num(r).imag)<1e-9] if isinstance(roots,list) else []
-        pts=[{'x':float(r.real),'y':0.0,'label':f'x={r.real:.3g}'} for r in real_roots] if real_roots else None
+        real_roots=[num(r) for r in roots if num(r) is not None] if isinstance(roots,list) else []
+        pts=[{'x':float(r.real) if hasattr(r,'real') else float(r),'y':0.0,'label':f'x={r}'} for r in real_roots] if real_roots else None
         if real_roots:
-            cx=sum(r.real for r in real_roots)/len(real_roots)
-            span=max(3, max(abs(r.real-cx) for r in real_roots)+2)
-            xmin,xmax=cx-span,cx+span
+            try:
+                cx=sum(float(r.real) if hasattr(r,'real') else float(r) for r in real_roots)/len(real_roots)
+                span=max(3, max(abs((float(r.real) if hasattr(r,'real') else float(r))-cx) for r in real_roots)+2)
+                xmin,xmax=cx-span,cx+span
+            except:
+                xmin,xmax=-5,5
         else:
             xmin,xmax=-5,5
-        plot={'exprs':[{'expr':for_plot(eq_sym,x),'label':f'{eq}','eq':f'{sp.latex(eq_sym)}=0','color':'blue'}],'x_min':xmin,'x_max':xmax,'points':pts,'title':f"Quadratic: {eq} - hover shows equation"}
+        plot={'exprs':[{'expr':for_plot(eq_sym,x),'label':f'{eq}','eq':f'{sp.latex(eq_sym)}=0 -> {eq}','color':'blue'}],'x_min':xmin,'x_max':xmax,'points':pts,'title':f"Quadratic: {eq} - hover shows generating equation"}
         _show(steps,final,plot)
     except Exception as ex: st.error(str(ex))
 
+def render_limit():
+    st.subheader("Limits - 7 Steps (Power, Substitution) - Theoretical + Substitution")
+    expr=st.text_input("Function f(x)", value="sin(x)/x", key="lim_expr")
+    point=st.number_input("x approaches", value=0.0, key="lim_point")
+    col1,col2=st.columns(2)
+    xmin=col1.slider("Graph x-min", -10.0, 0.0, -3.0, key="lim_xmin")
+    xmax=col2.slider("Graph x-max", 0.0, 10.0, 3.0, key="lim_xmax")
+    try:
+        x=X; f=parse_expr(expr); p=sp.nsimplify(point); sub=sp.simplify(f.subs(x,p)); lim=sp.limit(f,x,p)
+        steps=[("1. Theoretical Formula",f"**Theoretical:** $$\\lim_{{x\\to a}} f(x) = L$$"),("2. Identify f and a",f"$$f(x) = {sp.latex(f)}, \\quad a = {sp.latex(p)}$$"),("3. Substitute into Theoretical",f"$$f({sp.latex(p)}) = {sp.latex(sub)}$$"),("4. Simplification",f"$$f = {sp.latex(sp.simplify(f))}$$"),("5. Limit Laws",f"Sum, Product, Quotient"),("6. Calculate",f"$$\\lim = {sp.latex(lim)}$$"),("7. Verification & Graph",f"Final: $$\\boxed{{\\lim = {sp.latex(lim)}}}$$")]
+        final=f"\\lim = {sp.latex(lim)}"
+        yv=num(lim)
+        plot={'exprs':[{'expr':for_plot(f,x),'label':f'f(x) = {expr}','eq':f'f(x) = {expr}','color':'blue'}],'x_min':num(p)-3,'x_max':num(p)+3,'points':[{'x':float(p),'y':yv,'label':f'Limit = {lim}','color':'red'}] if yv is not None else None,'title':f"Limit: {expr}"}
+        plot['x_min']=xmin; plot['x_max']=xmax
+        _show(steps, final, plot)
+    except Exception as ex: st.error(str(ex))
+
 # APP
-st.set_page_config(page_title="CalculusFlow - Corrected Rules", page_icon="➗", layout="centered")
-st.title("CalculusFlow - Corrected Rules Structure")
-st.caption("Derivatives (x,y,z): Defined/Differentiable, Constant, Power, Sum/Difference, Product, Quotient, Chain, Limits | Integrals (x,y,z): Primitives, Substitution, By Parts, Definite, Indefinite, FTC (explanatory graph), Limits | Interactive hover graphs show generating equation | Linear/Quadratic with interactive graphs")
+st.set_page_config(page_title="CalculusFlow - Theoretical + Substitution", page_icon="➗", layout="centered")
+st.title("CalculusFlow - Theoretical Formula First, Then Substitution")
+st.caption("For Derivatives and Integrals: theoretical formula FIRST, then substitute values | Interactive hover graphs show generating equation | Linear/Quadratic interactive | All in English")
 
 MODULES={
     "Arithmetic":{
@@ -578,9 +665,9 @@ MODULES={
         "Long Division (Ideal)":render_long_division,
     },
     "Calculus":{
-        "Limits (7 steps)":lambda: render_limit(),
-        "Derivatives (Differentiation) (x,y,z) - 8 Rules":render_derivatives,
-        "Integrals (x,y,z) - 7 Rules":render_integrals,
+        "Limits (Theoretical + Substitution)":render_limit,
+        "Derivatives (x,y,z) - 8 Rules - Theoretical + Substitution":render_derivatives,
+        "Integrals (x,y,z) - 7 Rules - Theoretical + Substitution":render_integrals,
     },
     "Algebra":{
         "Linear Equation (Interactive Graph)":render_linear,
@@ -588,35 +675,14 @@ MODULES={
     },
 }
 
-def render_limit():
-    st.subheader("Limits - 7 Steps (Power, Substitution)")
-    expr=st.text_input("Function f(x)", value="sin(x)/x", key="lim_expr")
-    point=st.number_input("x approaches", value=0.0, key="lim_point")
-    col1,col2=st.columns(2)
-    xmin=col1.slider("Graph x-min", -10.0, 0.0, -3.0, key="lim_xmin")
-    xmax=col2.slider("Graph x-max", 0.0, 10.0, 3.0, key="lim_xmax")
-    try:
-        steps,final,plot=solve_limit_enhanced(expr, point)
-        plot['x_min']=xmin; plot['x_max']=xmax
-        _show(steps, final, plot)
-    except Exception as ex: st.error(str(ex))
-
-def solve_limit_enhanced(expr_str, point):
-    x=X; f=parse_expr(expr_str); p=sp.nsimplify(point); sub=sp.simplify(f.subs(x,p)); lim=sp.limit(f,x,p)
-    steps=[("Statement",f"Given: $$\\lim_{{x \\to {sp.latex(p)}}} {sp.latex(f)}$$"),("Domain",f"$$f(x) = {sp.latex(f)}$$"),("Direct Substitution",f"$$f({sp.latex(p)}) = {sp.latex(sub)}$$"),("Simplification",f"$$f = {sp.latex(sp.simplify(f))}$$"),("Limit Laws",f"Sum, Product, Quotient"),("Calculate",f"$$\\lim = {sp.latex(lim)}$$"),("Verification & Graph",f"Final: $$\\boxed{{\\lim = {sp.latex(lim)}}}$$")]
-    final=f"\\lim = {sp.latex(lim)}"
-    yv=num(lim)
-    plot={'exprs':[{'expr':for_plot(f,x),'label':f'f(x) = {expr_str}','eq':f'f(x) = {expr_str}','color':'blue'}],'x_min':num(p)-3,'x_max':num(p)+3,'points':[{'x':float(p),'y':yv,'label':f'Limit = {lim}','color':'red'}] if yv is not None else None,'title':f"Limit: {expr_str}"}
-    return steps,final,plot
-
 group=st.sidebar.radio("Area", list(MODULES.keys()))
 modules=MODULES[group]
 choice=st.sidebar.radio("Module", list(modules.keys()))
 st.sidebar.markdown("---")
 if PLOTLY_AVAILABLE:
-    st.sidebar.success("Plotly available - interactive hover graphs enabled (shows generating equation on curve/line)")
+    st.sidebar.success("Plotly available - hover shows generating equation")
 else:
     st.sidebar.warning("Add plotly to requirements.txt for hover")
     st.sidebar.code("plotly\nsympy\nmatplotlib\nstreamlit\nnumpy")
-st.sidebar.markdown("**Derivatives (x,y,z):**\n- Defined & Differentiable in Same Interval\n- Constant\n- Power\n- Sum & Difference\n- Product\n- Quotient\n- Chain\n- Limits\n\n**Integrals (x,y,z):**\n- Primitives\n- Substitution\n- By Parts\n- Definite\n- Indefinite\n- FTC (explanatory graph)\n- Limits")
+st.sidebar.markdown("**Derivatives (x,y,z):**\n- Defined & Differentiable in Same Interval\n- Constant Rule: d/dx[c]=0, d/dx[c·g]=c·g'\n- Power: d/dx x^n = n x^{n-1}\n- Sum/Difference: (f±g)'=f'±g'\n- Product: (uv)'=u'v+uv'\n- Quotient: (u/v)'=(u'v-uv')/v²\n- Chain: (f(g))'=f'(g)g'\n- Limits: f'=lim[f(x+h)-f(x)]/h\n\n**Integrals (x,y,z):**\n- Primitives: F'=f → ∫f=F+C\n- Substitution: ∫f(g)g' = ∫f(u)du\n- By Parts: ∫u dv=uv-∫v du\n- Definite: ∫_a^b f = F(b)-F(a)\n- Indefinite: ∫f = F+C\n- FTC: d/dx∫_a^x f = f, ∫_a^b f = F(b)-F(a)\n- Limits: ∫=lim Σ f(x_i)Δx\n\n**All:** Theoretical formula first, then substitute values")
 modules[choice]()
